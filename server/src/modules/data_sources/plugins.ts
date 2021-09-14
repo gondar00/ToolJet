@@ -1,17 +1,20 @@
 const { readdirSync } = require('fs');
 
 async function getPluginClasses() {
+  console.log('Loading plugins from the plugins directory 🔌');
 
-  console.log('Loading plugins from the plugins directory 🔌')
+  const directories = readdirSync('./plugins/datasources', {
+    withFileTypes: true,
+  })
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
 
-  const directories = readdirSync('./plugins/datasources', { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name);
+  const classes = {};
 
-  let classes = {}
-
-  for(const directory of directories) {
-    const pluginClassObject = await import(`../../../plugins/datasources/${directory}`)
+  for (const directory of directories) {
+    const pluginClassObject = await import(
+      `../../../plugins/datasources/${directory}`
+    );
     classes[directory] = pluginClassObject.default;
   }
 
