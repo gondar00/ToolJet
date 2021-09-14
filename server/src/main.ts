@@ -4,6 +4,7 @@ import * as helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { urlencoded, json } from 'express';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const fs = require('fs');
 
 globalThis.TOOLJET_VERSION = fs.readFileSync('./.version', 'utf8');
@@ -24,27 +25,14 @@ async function bootstrap() {
       useDefaults: true,
       directives: {
         'img-src': ['*', 'data:'],
-        'script-src': [
-          'maps.googleapis.com',
-          "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
-          'blob:',
-        ],
-        'default-src': [
-          'maps.googleapis.com',
-          '*.sentry.io',
-          "'self'",
-          'blob:',
-        ],
+        'script-src': ['maps.googleapis.com', "'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:'],
+        'default-src': ['maps.googleapis.com', '*.sentry.io', "'self'", 'blob:'],
       },
-    }),
+    })
   );
 
   app.use(json({ limit: '50mb' }));
-  app.use(
-    urlencoded({ extended: true, limit: '50mb', parameterLimit: 1000000 }),
-  );
+  app.use(urlencoded({ extended: true, limit: '50mb', parameterLimit: 1000000 }));
 
   const port = parseInt(process.env.PORT) || 3000;
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { OrganizationUsersService } from 'src/services/organization_users.service';
 import { decamelizeKeys } from 'humps';
@@ -9,9 +10,7 @@ import { User } from 'src/entities/user.entity';
 
 @Controller('organization_users')
 export class OrganizationUsersController {
-  constructor(
-    private organizationUsersService: OrganizationUsersService,
-  ) { }
+  constructor(private organizationUsersService: OrganizationUsersService) {}
 
   // Endpoint for inviting new organization users
   @UseGuards(JwtAuthGuard, PoliciesGuard)
@@ -37,5 +36,4 @@ export class OrganizationUsersController {
     const result = await this.organizationUsersService.changeRole(req.user, params.id, req.body.role);
     return decamelizeKeys({ result });
   }
-
 }

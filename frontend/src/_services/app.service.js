@@ -13,7 +13,7 @@ export const appService = {
   getAppUsers,
   createAppUser,
   setVisibility,
-  setSlug
+  setSlug,
 };
 
 function getConfig() {
@@ -23,15 +23,12 @@ function getConfig() {
 
 function getAll(page, folder) {
   const requestOptions = { method: 'GET', headers: authHeader() };
-  if (page === 0)
-    return fetch(`${config.apiUrl}/apps`, requestOptions).then(handleResponse);
-  else
-    return fetch(`${config.apiUrl}/apps?page=${page}&folder=${folder || ''}`, requestOptions).then(handleResponse);
+  if (page === 0) return fetch(`${config.apiUrl}/apps`, requestOptions).then(handleResponse);
+  else return fetch(`${config.apiUrl}/apps?page=${page}&folder=${folder || ''}`, requestOptions).then(handleResponse);
 }
 
 function createApp() {
-  const body = {
-  };
+  const body = {};
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
   return fetch(`${config.apiUrl}/apps`, requestOptions).then(handleResponse);
@@ -71,7 +68,7 @@ function createAppUser(app_id, org_user_id, role) {
   const body = {
     app_id,
     org_user_id,
-    role
+    role,
   };
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
@@ -79,7 +76,11 @@ function createAppUser(app_id, org_user_id, role) {
 }
 
 function setVisibility(appId, visibility) {
-  const requestOptions = { method: 'PUT', headers: authHeader(), body: JSON.stringify({ app: { is_public: visibility } }) };
+  const requestOptions = {
+    method: 'PUT',
+    headers: authHeader(),
+    body: JSON.stringify({ app: { is_public: visibility } }),
+  };
   return fetch(`${config.apiUrl}/apps/${appId}`, requestOptions).then(handleResponse);
 }
 

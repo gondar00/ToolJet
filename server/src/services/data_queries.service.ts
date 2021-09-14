@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/ban-types */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,34 +13,36 @@ import { DataSourcesService } from './data_sources.service';
 
 @Injectable()
 export class DataQueriesService {
-
   constructor(
     private credentialsService: CredentialsService,
     private dataSourcesService: DataSourcesService,
     @InjectRepository(DataQuery)
-    private dataQueriesRepository: Repository<DataQuery>,
-  ) { }
+    private dataQueriesRepository: Repository<DataQuery>
+  ) {}
 
   async findOne(dataQueryId: string): Promise<DataQuery> {
-    return await this.dataQueriesRepository.findOne(
-      { id: dataQueryId },
-      { relations: ['dataSource', 'app'] },
-    );
+    return await this.dataQueriesRepository.findOne({ id: dataQueryId }, { relations: ['dataSource', 'app'] });
   }
 
   async all(user: User, appId: string): Promise<DataQuery[]> {
-
     return await this.dataQueriesRepository.find({
-        where: {
-          appId,
-        },
-        order: {
-          name: 'ASC'
-        }
+      where: {
+        appId,
+      },
+      order: {
+        name: 'ASC',
+      },
     });
   }
 
-  async create(user: User, name: string, kind: string, options: object, appId: string, dataSourceId: string): Promise<DataQuery> {
+  async create(
+    user: User,
+    name: string,
+    kind: string,
+    options: object,
+    appId: string,
+    dataSourceId: string
+  ): Promise<DataQuery> {
     const newDataQuery = this.dataQueriesRepository.create({
       name,
       kind,
@@ -47,7 +51,7 @@ export class DataQueriesService {
       dataSourceId,
       createdAt: new Date(),
       updatedAt: new Date(),
-    })
+    });
 
     return this.dataQueriesRepository.save(newDataQuery);
   }
@@ -62,13 +66,12 @@ export class DataQueriesService {
       name,
       options,
       updatedAt: new Date(),
-    })
+    });
 
     return dataQuery;
   }
 
   async runQuery(user: User, dataQuery: any, queryOptions: object): Promise<object> {
-
     const dataSource = dataQuery.dataSource?.id ? dataQuery.dataSource : {};
     const sourceOptions = await this.parseSourceOptions(dataSource.options);
     const parsedQueryOptions = await this.parseQueryOptions(dataQuery.options, queryOptions);
@@ -83,36 +86,37 @@ export class DataQueriesService {
   }
 
   /* This function fetches access token from authorization code */
-  async authorizeOauth2(dataSource: DataSource, code:string): Promise<any> {
+  async authorizeOauth2(dataSource: DataSource, code: string): Promise<any> {
     const sourceOptions = await this.parseSourceOptions(dataSource.options);
     const queryService = new RestapiQueryService();
     const tokenData = await queryService.fetchOAuthToken(sourceOptions, code);
 
-    const tokenOptions = [{
-      key: 'tokenData',
-      value: tokenData,
-      encrypted: false
-    }];
+    const tokenOptions = [
+      {
+        key: 'tokenData',
+        value: tokenData,
+        encrypted: false,
+      },
+    ];
 
     return await this.dataSourcesService.updateOptions(dataSource.id, tokenOptions);
   }
 
   async parseSourceOptions(options: any): Promise<object> {
-
     // For adhoc queries such as REST API queries, source options will be null
-    if(!options) return {};
+    if (!options) return {};
 
     const parsedOptions = {};
 
-    for(const key of Object.keys(options)) {
+    for (const key of Object.keys(options)) {
       const option = options[key];
       const encrypted = option['encrypted'];
-      if(encrypted) {
+      if (encrypted) {
         const credentialId = option['credential_id'];
         const value = await this.credentialsService.getValue(credentialId);
         parsedOptions[key] = value;
       } else {
-        parsedOptions[key] = option['value']
+        parsedOptions[key] = option['value'];
       }
     }
 
@@ -120,37 +124,36 @@ export class DataQueriesService {
   }
 
   async parseQueryOptions(object: any, options: object): Promise<object> {
-    if( typeof object === 'object' ) {
-      for( const key of Object.keys(object) ) {
+    if (typeof object === 'object') {
+      for (const key of Object.keys(object)) {
         object[key] = await this.parseQueryOptions(object[key], options);
       }
       return object;
-
-    } else if(typeof object === 'string') {
-
-      if(object.startsWith('{{') && object.endsWith('}}') && (object.match(/{{/g) || []).length === 1) {
+    } else if (typeof object === 'string') {
+      if (object.startsWith('{{') && object.endsWith('}}') && (object.match(/{{/g) || []).length === 1) {
         object = options[object];
         return object;
-
       } else {
         const variables = object.match(/\{\{(.*?)\}\}/g);
 
-        if(variables?.length > 0) {
-          for(const variable of variables) {
+        if (variables?.length > 0) {
+          for (const variable of variables) {
             object = object.replace(variable, options[variable]);
           }
         } else {
+          // eslint-disable-next-line no-self-assign
           object = object;
         }
 
         return object;
       }
-
     } else if (Array.isArray(object)) {
-      object.forEach(element => {
-      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      object.forEach((element) => {});
 
-      for(const [index, element] of object) {
+      for (const [index, element] of object) {
         object[index] = await this.parseQueryOptions(element, options);
       }
       return object;

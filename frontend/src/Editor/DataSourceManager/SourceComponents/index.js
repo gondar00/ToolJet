@@ -14,18 +14,18 @@ import { Graphql } from './Graphql';
 import { Mssql } from './Mssql';
 
 export const SourceComponents = {
-    Elasticsearch,
-    Redis,
-    Postgresql,
-    Mysql,
-    Stripe,
-    Firestore,
-    Restapi,
-    Googlesheets,
-    Slack,
-    Mongodb,
-    Dynamodb,
-    Airtable,
-    Graphql,
-    Mssql
+  Elasticsearch,
+  Redis,
+  Postgresql,
+  Mysql,
+  Stripe,
+  Firestore,
+  Restapi,
+  Googlesheets,
+  Slack,
+  Mongodb,
+  Dynamodb,
+  Airtable,
+  Graphql,
+  Mssql,
 };

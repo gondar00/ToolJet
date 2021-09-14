@@ -19,7 +19,21 @@ import { FolderApp } from 'src/entities/folder_app.entity';
 import { DataSource } from 'src/entities/data_source.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([App, AppVersion, AppUser, DataQuery, Folder, FolderApp, OrganizationUser, User, Organization, DataSource]), CaslModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      App,
+      AppVersion,
+      AppUser,
+      DataQuery,
+      Folder,
+      FolderApp,
+      OrganizationUser,
+      User,
+      Organization,
+      DataSource,
+    ]),
+    CaslModule,
+  ],
   providers: [AppsService, AppUsersService, UsersService, FoldersService],
   controllers: [AppsController, AppUsersController],
 })

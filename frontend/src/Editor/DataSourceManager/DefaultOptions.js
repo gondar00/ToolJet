@@ -5,27 +5,27 @@ export const defaultOptions = {
     database: { value: '' },
     username: { value: '' },
     password: { value: '' },
-    ssl_enabled: { value: true }
+    ssl_enabled: { value: true },
   },
   mysql: {
     host: { value: 'localhost' },
     port: { value: 3306 },
     database: { value: '' },
     username: { value: '' },
-    password: { value: '' }
+    password: { value: '' },
   },
   mssql: {
     host: { value: 'localhost' },
     port: { value: 1433 },
     database: { value: '' },
     username: { value: '' },
-    password: { value: '' }
+    password: { value: '' },
   },
   redis: {
     host: { value: 'localhost' },
     port: { value: 6379 },
     username: { value: '' },
-    password: { value: '' }
+    password: { value: '' },
   },
   mongodb: {
     database: { value: '' },
@@ -34,7 +34,7 @@ export const defaultOptions = {
     username: { value: '' },
     password: { value: '' },
     connection_type: { value: 'manual' },
-    connection_string: { value: ''}
+    connection_string: { value: '' },
   },
 
   elasticsearch: {
@@ -42,16 +42,16 @@ export const defaultOptions = {
     host: { value: 'localhost' },
     port: { value: 9200 },
     username: { value: '' },
-    password: { value: '' }
+    password: { value: '' },
   },
   stripe: {
-    api_key: { value: '' }
+    api_key: { value: '' },
   },
   airtable: {
-    api_key: { value: '' }
+    api_key: { value: '' },
   },
   firestore: {
-    gcp_key: { value: '' }
+    gcp_key: { value: '' },
   },
   restapi: {
     url: { value: '' },
@@ -66,22 +66,22 @@ export const defaultOptions = {
     auth_url: { value: '' },
     client_auth: { value: 'header' },
     headers: { value: [['', '']] },
-    custom_auth_params: { value: [['', '']] }
+    custom_auth_params: { value: [['', '']] },
   },
   graphql: {
     url: { value: '' },
     headers: { value: [['', '']] },
-    url_params: { value: [['', '']] }
+    url_params: { value: [['', '']] },
   },
   googlesheets: {
-    access_type: { value: 'read' }
+    access_type: { value: 'read' },
   },
   slack: {
-    access_type: { value: 'read' }
+    access_type: { value: 'read' },
   },
   dynamodb: {
-    region: { value: ''},
-    access_key: { value: ''},
-    secret_key: { value: ''}
-  }
+    region: { value: '' },
+    access_key: { value: '' },
+    secret_key: { value: '' },
+  },
 };

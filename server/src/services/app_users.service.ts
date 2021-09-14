@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { App } from 'src/entities/app.entity';
@@ -8,26 +9,24 @@ import { OrganizationUser } from 'src/entities/organization_user.entity';
 
 @Injectable()
 export class AppUsersService {
-
   constructor(
     @InjectRepository(AppUser)
     private appUsersRepository: Repository<AppUser>,
     @InjectRepository(OrganizationUser)
-    private organizationUsersRepository: Repository<AppUser>,
-  ) { }
+    private organizationUsersRepository: Repository<AppUser>
+  ) {}
 
   async create(user: User, appId: string, organizationUserId: string, role: string): Promise<AppUser> {
-
     const organizationUser = await this.organizationUsersRepository.findOne(organizationUserId);
 
-    return await this.appUsersRepository.save(this.appUsersRepository.create({
-      appId,
-      userId: organizationUser.userId,
-      role,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-    
+    return await this.appUsersRepository.save(
+      this.appUsersRepository.create({
+        appId,
+        userId: organizationUser.userId,
+        role,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    );
   }
-
 }

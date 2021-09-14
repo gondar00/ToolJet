@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { App } from 'src/entities/app.entity';
@@ -12,7 +13,6 @@ import { DataQuery } from 'src/entities/data_query.entity';
 
 @Injectable()
 export class AppsService {
-
   constructor(
     @InjectRepository(App)
     private appsRepository: Repository<App>,
@@ -30,75 +30,77 @@ export class AppsService {
     private dataQueriesRepository: Repository<DataQuery>,
 
     @InjectRepository(FolderApp)
-    private folderAppsRepository: Repository<FolderApp>,
-  ) { }
+    private folderAppsRepository: Repository<FolderApp>
+  ) {}
 
   async find(id: string): Promise<App> {
     return this.appsRepository.findOne(id, {
-      relations: ['dataQueries']
+      relations: ['dataQueries'],
     });
   }
 
   async findBySlug(slug: string): Promise<App> {
     return await this.appsRepository.findOne({
       where: {
-        slug
+        slug,
       },
-      relations: ['dataQueries']
+      relations: ['dataQueries'],
     });
   }
 
   async findVersion(id: string): Promise<AppVersion> {
     return this.appVersionsRepository.findOne(id, {
-      relations: ['app']
+      relations: ['app'],
     });
   }
 
   async create(user: User): Promise<App> {
-    const app = await this.appsRepository.save(this.appsRepository.create({
+    const app = await this.appsRepository.save(
+      this.appsRepository.create({
         name: 'Untitled app',
         createdAt: new Date(),
         updatedAt: new Date(),
         organizationId: user.organization.id,
-        user: user
-    }));
+        user: user,
+      })
+    );
 
-    await this.appUsersRepository.save(this.appUsersRepository.create({
-      userId: user.id,
-      appId: app.id,
-      role: 'admin',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
+    await this.appUsersRepository.save(
+      this.appUsersRepository.create({
+        userId: user.id,
+        appId: app.id,
+        role: 'admin',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    );
 
     return app;
   }
 
   async count(user: User) {
     return await this.appsRepository.count({
-        where: {
-            organizationId: user.organizationId,
-        },
-     });
+      where: {
+        organizationId: user.organizationId,
+      },
+    });
   }
 
   async all(user: User, page: number): Promise<App[]> {
-
     return await this.appsRepository.find({
-        relations: ['user'],
-        where: {
-            organizationId: user.organizationId,
-        },
-        take: 10,
-        skip: 10 * (page - 1),
-        order: {
-            createdAt: 'DESC'
-        }
+      relations: ['user'],
+      where: {
+        organizationId: user.organizationId,
+      },
+      take: 10,
+      skip: 10 * (page - 1),
+      order: {
+        createdAt: 'DESC',
+      },
     });
   }
 
   async update(user: User, appId: string, params: any) {
-
     const currentVersionId = params['current_version_id'];
     const isPublic = params['is_public'];
     const { name, slug } = params;
@@ -107,47 +109,49 @@ export class AppsService {
       name,
       slug,
       isPublic,
-      currentVersionId
-    }
+      currentVersionId,
+    };
 
     // removing keys with undefined values
-    Object.keys(updateableParams).forEach(key => updateableParams[key] === undefined ? delete updateableParams[key] : {});
+    Object.keys(updateableParams).forEach((key) =>
+      updateableParams[key] === undefined ? delete updateableParams[key] : {}
+    );
 
     return await this.appsRepository.update(appId, updateableParams);
   }
 
   async delete(appId: string) {
+    await this.appsRepository.update(appId, { currentVersionId: null });
 
-    await this.appsRepository.update(appId, { currentVersionId: null } );
-
-    const repositoriesToFetchEntitiesToBeDeleted:Repository<any>[] = [
+    const repositoriesToFetchEntitiesToBeDeleted: Repository<any>[] = [
       this.appUsersRepository,
       this.folderAppsRepository,
       this.dataQueriesRepository,
       this.dataSourcesRepository,
-      this.appVersionsRepository
+      this.appVersionsRepository,
     ];
 
-    for(const repository of repositoriesToFetchEntitiesToBeDeleted) {
+    for (const repository of repositoriesToFetchEntitiesToBeDeleted) {
       const entities = await repository.find({
-        where: { appId }
-      })
-      for(const entity of entities) { await repository.delete(entity.id) };
+        where: { appId },
+      });
+      for (const entity of entities) {
+        await repository.delete(entity.id);
+      }
     }
 
     return await this.appsRepository.delete(appId);
   }
 
   async fetchUsers(user: any, appId: string): Promise<AppUser[]> {
-
     const appUsers = await this.appUsersRepository.find({
       where: { appId },
-      relations: ['user']
+      relations: ['user'],
     });
 
     // serialize
-    const serializedUsers = []
-    for(const appUser of appUsers) {
+    const serializedUsers = [];
+    for (const appUser of appUsers) {
       serializedUsers.push({
         email: appUser.user.email,
         firstName: appUser.user.firstName,
@@ -171,25 +175,25 @@ export class AppsService {
   }
 
   async createVersion(user: User, app: App, versionName: string): Promise<AppVersion> {
-   const lastVersion = await this.appVersionsRepository.findOne({
-     where: { appId: app.id },
+    const lastVersion = await this.appVersionsRepository.findOne({
+      where: { appId: app.id },
       order: {
         createdAt: 'DESC',
       },
     });
 
-    return await this.appVersionsRepository.save(this.appVersionsRepository.create({
-      name: versionName,
-      app,
-      definition: lastVersion?.definition,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-
+    return await this.appVersionsRepository.save(
+      this.appVersionsRepository.create({
+        name: versionName,
+        app,
+        definition: lastVersion?.definition,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    );
   }
 
   async updateVersion(user: User, version: AppVersion, definition: any) {
     return await this.appVersionsRepository.update(version.id, { definition });
   }
-
 }
