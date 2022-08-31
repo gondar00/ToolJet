@@ -3,7 +3,11 @@ import { useSpring, animated } from 'react-spring';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
 
-export const DarkModeToggle = function DarkModeToggle({ darkMode = false, switchDarkMode }) {
+export const DarkModeToggle = function DarkModeToggle({
+  darkMode = false,
+  switchDarkMode,
+  tooltipPlacement = 'bottom',
+}) {
   const toggleDarkMode = () => {
     switchDarkMode(!darkMode);
   };
@@ -43,7 +47,7 @@ export const DarkModeToggle = function DarkModeToggle({ darkMode = false, switch
 
   return (
     <OverlayTrigger
-      placement="bottom"
+      placement={tooltipPlacement}
       delay={{ show: 250, hide: 400 }}
       overlay={<Tooltip id="button-tooltip">{darkMode ? 'Activate light mode' : 'Activate dark mode'}</Tooltip>}
     >
@@ -69,7 +73,13 @@ export const DarkModeToggle = function DarkModeToggle({ darkMode = false, switch
           <animated.circle style={maskedCircleProps} r="9" fill="black" />
         </mask>
 
-        <animated.circle cx="12" cy="12" style={centerCircleProps} fill={darkMode ? 'white' : '#808080'} mask="url(#myMask2)" />
+        <animated.circle
+          cx="12"
+          cy="12"
+          style={centerCircleProps}
+          fill={darkMode ? 'white' : '#808080'}
+          mask="url(#myMask2)"
+        />
         <animated.g stroke="currentColor" style={linesProps}>
           <line x1="12" y1="1" x2="12" y2="3" />
           <line x1="12" y1="21" x2="12" y2="23" />

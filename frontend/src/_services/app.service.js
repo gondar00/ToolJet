@@ -5,6 +5,10 @@ export const appService = {
   getConfig,
   getAll,
   createApp,
+  cloneApp,
+  exportApp,
+  importApp,
+  changeIcon,
   deleteApp,
   getApp,
   getAppBySlug,
@@ -13,7 +17,10 @@ export const appService = {
   getAppUsers,
   createAppUser,
   setVisibility,
-  setSlug
+  setMaintenance,
+  setSlug,
+  setPasswordFromToken,
+  acceptInvite,
 };
 
 function getConfig() {
@@ -21,20 +28,41 @@ function getConfig() {
   return fetch(`${config.apiUrl}/config`, requestOptions).then(handleResponse);
 }
 
-function getAll(page, folder) {
+function getAll(page, folder, searchKey) {
   const requestOptions = { method: 'GET', headers: authHeader() };
-  if (page === 0)
-    return fetch(`${config.apiUrl}/apps`, requestOptions).then(handleResponse);
+  if (page === 0) return fetch(`${config.apiUrl}/apps`, requestOptions).then(handleResponse);
   else
-    return fetch(`${config.apiUrl}/apps?page=${page}&folder=${folder || ''}`, requestOptions).then(handleResponse);
+    return fetch(
+      `${config.apiUrl}/apps?page=${page}&folder=${folder || ''}&searchKey=${searchKey}`,
+      requestOptions
+    ).then(handleResponse);
 }
 
 function createApp() {
-  const body = {
-  };
+  const body = {};
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
   return fetch(`${config.apiUrl}/apps`, requestOptions).then(handleResponse);
+}
+
+function cloneApp(id) {
+  const requestOptions = { method: 'POST', headers: authHeader() };
+  return fetch(`${config.apiUrl}/apps/${id}/clone`, requestOptions).then(handleResponse);
+}
+
+function exportApp(id) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${config.apiUrl}/apps/${id}/export`, requestOptions).then(handleResponse);
+}
+
+function importApp(body) {
+  const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
+  return fetch(`${config.apiUrl}/apps/import`, requestOptions).then(handleResponse);
+}
+
+function changeIcon(icon, appId) {
+  const requestOptions = { method: 'PUT', headers: authHeader(), body: JSON.stringify({ icon }) };
+  return fetch(`${config.apiUrl}/apps/${appId}/icons`, requestOptions).then(handleResponse);
 }
 
 function getApp(id) {
@@ -71,7 +99,7 @@ function createAppUser(app_id, org_user_id, role) {
   const body = {
     app_id,
     org_user_id,
-    role
+    role,
   };
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
@@ -79,11 +107,49 @@ function createAppUser(app_id, org_user_id, role) {
 }
 
 function setVisibility(appId, visibility) {
-  const requestOptions = { method: 'PUT', headers: authHeader(), body: JSON.stringify({ app: { is_public: visibility } }) };
+  const requestOptions = {
+    method: 'PUT',
+    headers: authHeader(),
+    body: JSON.stringify({ app: { is_public: visibility } }),
+  };
+  return fetch(`${config.apiUrl}/apps/${appId}`, requestOptions).then(handleResponse);
+}
+
+function setMaintenance(appId, value) {
+  const requestOptions = {
+    method: 'PUT',
+    headers: authHeader(),
+    body: JSON.stringify({ app: { is_maintenance_on: value } }),
+  };
   return fetch(`${config.apiUrl}/apps/${appId}`, requestOptions).then(handleResponse);
 }
 
 function setSlug(appId, slug) {
   const requestOptions = { method: 'PUT', headers: authHeader(), body: JSON.stringify({ app: { slug: slug } }) };
   return fetch(`${config.apiUrl}/apps/${appId}`, requestOptions).then(handleResponse);
+}
+
+function setPasswordFromToken({ token, password, organization, role, firstName, lastName, organizationToken }) {
+  const body = {
+    token,
+    organizationToken,
+    password,
+    organization,
+    role,
+    first_name: firstName,
+    last_name: lastName,
+  };
+
+  const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
+  return fetch(`${config.apiUrl}/set-password-from-token`, requestOptions).then(handleResponse);
+}
+
+function acceptInvite({ token, password }) {
+  const body = {
+    token,
+    password,
+  };
+
+  const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
+  return fetch(`${config.apiUrl}/accept-invite`, requestOptions);
 }

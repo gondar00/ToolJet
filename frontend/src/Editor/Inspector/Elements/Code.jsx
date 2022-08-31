@@ -1,9 +1,18 @@
 import React from 'react';
 import { CodeHinter } from '../../CodeBuilder/CodeHinter';
-import { ToolTip } from './Components/ToolTip';
 
 export const Code = ({
-  param, definition, onChange, paramType, dataQueries, components, componentMeta, currentState, darkMode
+  param,
+  definition,
+  onChange,
+  paramType,
+  componentMeta,
+  currentState,
+  darkMode,
+  componentName,
+  onFxPress,
+  fxActive,
+  component,
 }) => {
   const initialValue = definition ? definition.value : '';
   const paramMeta = componentMeta[paramType][param.name];
@@ -13,19 +22,31 @@ export const Code = ({
     onChange(param, 'value', value, paramType);
   }
 
-  const options = paramMeta.options || {}
+  const options = paramMeta.options || {};
+
+  const getfieldName = React.useMemo(() => {
+    return param.name;
+  }, [param]);
 
   return (
     <div className={`mb-2 field ${options.className}`}>
-      <ToolTip label={displayName} meta={paramMeta}/>
       <CodeHinter
-          currentState={currentState}
-          initialValue={initialValue}
-          mode={options.mode}
-          theme={darkMode? 'monokai' : options.theme}
-          lineWrapping={true}
-          className={options.className}
-          onChange={(value) => handleCodeChanged(value)}
+        enablePreview={true}
+        currentState={currentState}
+        initialValue={initialValue}
+        mode={options.mode}
+        theme={darkMode ? 'monokai' : options.theme}
+        lineWrapping={true}
+        className={options.className}
+        onChange={(value) => handleCodeChanged(value)}
+        componentName={`widget/${componentName}::${getfieldName}`}
+        type={paramMeta.type}
+        paramName={param.name}
+        paramLabel={displayName}
+        fieldMeta={paramMeta}
+        onFxPress={onFxPress}
+        fxActive={fxActive}
+        component={component}
       />
     </div>
   );

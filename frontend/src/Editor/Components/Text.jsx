@@ -1,61 +1,74 @@
 import React, { useState, useEffect } from 'react';
-import { resolveReferences, resolveWidgetFieldValue } from '@/_helpers/utils';
 import DOMPurify from 'dompurify';
-import Skeleton from 'react-loading-skeleton';
 
-export const Text = function Text({
-  id, width, height, component, onComponentClick, currentState
-}) {
-  const text = component.definition.properties.text.value;
-  const color = component.definition.styles.textColor.value;
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
-
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
+export const Text = function Text({ height, properties, styles, darkMode, registerAction }) {
+  let {
+    textSize,
+    textColor,
+    textAlign,
+    visibility,
+    disabledState,
+    fontWeight,
+    decoration,
+    transformation,
+    fontStyle,
+    lineHeight,
+    textIndent,
+    letterSpacing,
+    wordSpacing,
+    fontVariant,
+  } = styles;
   const [loadingState, setLoadingState] = useState(false);
+  const [text, setText] = useState(() => computeText());
 
+  const color = textColor === '#000' ? (darkMode ? '#fff' : '#000') : textColor;
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setText(() => computeText()), [properties.text]);
   useEffect(() => {
-    const loadingStateProperty = component.definition.properties.loadingState;
-    if (loadingStateProperty && currentState) {
-      const newState = resolveReferences(loadingStateProperty.value, currentState, false);
-      setLoadingState(newState);
-    }
-  }, [currentState]);
+    const loadingStateProperty = properties.loadingState;
+    setLoadingState(loadingStateProperty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties.loadingState]);
 
-  let data = text;
-  if (currentState) {
-    const matchedParams = text.match(/\{\{(.*?)\}\}/g);
+  registerAction('setText', async function (text) {
+    setText(text);
+  });
 
-    if (matchedParams) {
-      for (const param of matchedParams) {
-        const resolvedParam = resolveReferences(param, currentState, '');
-        console.log('resolved param', param, resolvedParam);
-        data = data.replace(param, resolvedParam);
-      }
-    }
+  function computeText() {
+    return properties.text === 0 || properties.text === false ? properties.text?.toString() : properties.text;
   }
-
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
 
   const computedStyles = {
     color,
-    width,
     height,
-    display: parsedWidgetVisibility ? 'flex' : 'none',
-    alignItems: 'center'
+    display: visibility ? 'flex' : 'none',
+    alignItems: 'center',
+    textAlign,
+    fontWeight: fontWeight ? fontWeight : fontWeight === '0' ? 0 : 'normal',
+    lineHeight: lineHeight ?? 1.5,
+    textDecoration: decoration ?? 'none',
+    textTransform: transformation ?? 'none',
+    fontStyle: fontStyle ?? 'none',
+    fontVariant: fontVariant ?? 'normal',
+    textIndent: `${textIndent}px` ?? '0px',
+    letterSpacing: `${letterSpacing}px` ?? '0px',
+    wordSpacing: `${wordSpacing}px` ?? '0px',
   };
 
   return (
-    <div data-disabled={parsedDisabledState} className="text-widget" style={computedStyles} onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}>
-      {!loadingState && <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data) }} />}
+    <div data-disabled={disabledState} className="text-widget" style={computedStyles}>
+      {!loadingState && (
+        <div
+          style={{ width: '100%', fontSize: textSize }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
+        />
+      )}
       {loadingState === true && (
-        <div>
-          <div className="skeleton-line w-10"></div>
+        <div style={{ width: '100%' }}>
+          <center>
+            <div className="spinner-border" role="status"></div>
+          </center>
         </div>
       )}
     </div>

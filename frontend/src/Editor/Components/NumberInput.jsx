@@ -1,55 +1,46 @@
-import React, { useEffect, useState } from 'react';
-import { resolveReferences, resolveWidgetFieldValue } from '@/_helpers/utils';
+import React, { useEffect } from 'react';
 
-export const NumberInput = function NumberInput({
-  id,
-  width,
-  height,
-  component,
-  onComponentClick,
-  currentState,
-  onComponentOptionChanged
-}) {
+export const NumberInput = function NumberInput({ height, properties, styles, setExposedVariable }) {
+  const { visibility, borderRadius } = styles;
 
-  const value = component.definition.properties.value ? component.definition.properties.value.value : '';
-  const [number, setNumber] = useState(value);
+  const [value, setValue] = React.useState(parseInt(properties.value));
 
-  const numberInputProperty = component.definition.properties.value;
-  let newNumber = value;
-  if (numberInputProperty && currentState) {
-    newNumber = resolveReferences(numberInputProperty.value, currentState, '');
-  }
+  const handleChange = (e) => {
+    if (
+      !isNaN(parseInt(properties.minValue)) &&
+      !isNaN(parseInt(properties.maxValue)) &&
+      parseInt(properties.minValue) > parseInt(properties.maxValue)
+    ) {
+      setValue(parseInt(properties.maxValue));
+    } else if (!isNaN(parseInt(properties.maxValue)) && parseInt(e.target.value) > parseInt(properties.maxValue)) {
+      setValue(parseInt(properties.maxValue));
+    } else if (!isNaN(parseInt(properties.minValue)) && parseInt(e.target.value) < parseInt(properties.minValue)) {
+      setValue(parseInt(properties.minValue));
+    } else {
+      setValue(parseInt(e.target.value));
+    }
+  };
 
   useEffect(() => {
-    setNumber(parseInt(newNumber));
-    onComponentOptionChanged(component, 'value', parseInt(newNumber));
-  }, [newNumber]);
+    setValue(parseInt(properties.value));
+  }, [properties.value]);
 
-  const placeholder = component.definition.properties.placeholder.value;
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
-
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
+  useEffect(() => {
+    if (!isNaN(value)) {
+      setExposedVariable('value', value);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   return (
     <input
-      disabled={parsedDisabledState}
-      onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}
-      onChange={(e) => {
-        setNumber(parseInt(e.target.value));
-        onComponentOptionChanged(component, 'value', parseInt(e.target.value));
-      }}
+      disabled={styles.disabledState}
+      onChange={handleChange}
       type="number"
       className="form-control"
-      placeholder={placeholder}
-      style={{ width, height, display:parsedWidgetVisibility ? '' : 'none' }}
-      value={number}
+      placeholder={properties.placeholder}
+      style={{ height, display: visibility ? '' : 'none', borderRadius: `${borderRadius}px` }}
+      value={value}
     />
   );
 };

@@ -1,14 +1,37 @@
 import React from 'react';
 import { authenticationService } from '@/_services';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { validateEmail } from '../_helpers/utils';
+import GoogleSSOLoginButton from '@ee/components/LoginPage/GoogleSSOLoginButton';
+import GitSSOLoginButton from '@ee/components/LoginPage/GitSSOLoginButton';
 
 class SignupPage extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      isLoading: false
+      isLoading: false,
+    };
+
+    this.ssoConfigs = {
+      enableSignUp:
+        window.public_config?.DISABLE_MULTI_WORKSPACE !== 'true' &&
+        window.public_config?.SSO_DISABLE_SIGNUPS !== 'true',
+      configs: {
+        google: {
+          enabled: !!window.public_config?.SSO_GOOGLE_OAUTH2_CLIENT_ID,
+          configs: {
+            client_id: window.public_config?.SSO_GOOGLE_OAUTH2_CLIENT_ID,
+          },
+        },
+        git: {
+          enabled: !!window.public_config?.SSO_GIT_OAUTH2_CLIENT_ID,
+          configs: {
+            client_id: window.public_config?.SSO_GIT_OAUTH2_CLIENT_ID,
+          },
+        },
+      },
     };
   }
 
@@ -23,18 +46,31 @@ class SignupPage extends React.Component {
 
     const { email } = this.state;
 
+    if (!validateEmail(email)) {
+      toast.error('Invalid email', {
+        id: 'toast-login-auth-error',
+        position: 'top-center',
+      });
+      this.setState({ isLoading: false });
+      return;
+    }
+
     authenticationService.signup(email).then(
       () => {
-        const { from } = this.props.location.state || { from: { pathname: '/' } };
-        this.setState({ isLoading: false, signupSuccess: true  });
+        // eslint-disable-next-line no-unused-vars
+        const { from } = this.props.location.state || {
+          from: { pathname: '/' },
+        };
+        this.setState({ isLoading: false, signupSuccess: true });
       },
-      () => {
-        toast.error('Invalid email', { hideProgressBar: true, position: 'top-center' });
+      (e) => {
+        toast.error(e?.error || 'Something went wrong!', {
+          position: 'top-center',
+        });
         this.setState({ isLoading: false });
       }
     );
   };
-
   render() {
     const { isLoading, signupSuccess } = this.state;
 
@@ -42,14 +78,35 @@ class SignupPage extends React.Component {
       <div className="page page-center">
         <div className="container-tight py-2">
           <div className="text-center mb-4">
-            <a href=".">
-              <img src="/assets/images/logo-text.svg" height="30" alt="" />
+            <a href="." className="navbar-brand-autodark">
+              <img src="assets/images/logo-color.svg" height="26" alt="" />
             </a>
           </div>
           <form className="card card-md" action="." method="get" autoComplete="off">
-            {!signupSuccess && 
+            {!signupSuccess && (
               <div className="card-body">
                 <h2 className="card-title text-center mb-4">Create a ToolJet account</h2>
+                {this.ssoConfigs.enableSignUp && (
+                  <div className="d-flex flex-column align-items-center separator-bottom">
+                    {this.ssoConfigs.configs?.google?.enabled && (
+                      <GoogleSSOLoginButton
+                        text="Sign up with Google"
+                        configs={this.ssoConfigs.configs?.google?.configs}
+                        configId={this.ssoConfigs.configs?.google?.config_id}
+                      />
+                    )}
+                    {this.ssoConfigs.configs?.git?.enabled && (
+                      <GitSSOLoginButton text="Sign up with GitHub" configs={this.ssoConfigs.configs?.git?.configs} />
+                    )}
+                    {(this.ssoConfigs.configs?.git?.enabled || this.ssoConfigs.configs?.google?.enabled) && (
+                      <div className="mt-2 separator">
+                        <h2>
+                          <span>OR</span>
+                        </h2>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="mb-3">
                   <label className="form-label">Email address</label>
                   <input
@@ -66,19 +123,17 @@ class SignupPage extends React.Component {
                   </button>
                 </div>
               </div>
-            }
-            {signupSuccess && 
-              <div className="card-body">Please check your email for confirmation link</div>
-            }
+            )}
+            {signupSuccess && <div className="card-body">Please check your email for confirmation link</div>}
           </form>
-          {!signupSuccess && 
+          {!signupSuccess && (
             <div className="text-center text-muted mt-3">
               Already have an account? &nbsp;
               <Link to={'/login'} tabIndex="-1">
                 Sign in
               </Link>
             </div>
-          }
+          )}
         </div>
       </div>
     );

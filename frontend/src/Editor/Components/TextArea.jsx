@@ -1,55 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { resolveReferences, resolveWidgetFieldValue } from '@/_helpers/utils';
 
-export const TextArea = function TextArea({
-  id,
-  width,
-  height,
-  component,
-  onComponentClick,
-  currentState,
-  onComponentOptionChanged
-}) {
-
-  const value = component.definition.properties.value ? component.definition.properties.value.value : '';
-  const [text, setText] = useState(value);
-
-  const textProperty = component.definition.properties.value;
-  let newText = value;
-  if (textProperty && currentState) {
-    newText = resolveReferences(textProperty.value, currentState, '');
-  }
-
+export const TextArea = function TextArea({ height, properties, styles, setExposedVariable, registerAction }) {
+  const [value, setValue] = useState(properties.value);
   useEffect(() => {
-    setText(newText);
-    onComponentOptionChanged(component, 'value', newText);
-  }, [newText]);
-  
-  const placeholder = component.definition.properties.placeholder.value;
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
+    setValue(properties.value);
+    setExposedVariable('value', properties.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties.value]);
 
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
-
+  registerAction('setText', async function (text) {
+    setValue(text);
+    setExposedVariable('value', text);
+  });
+  registerAction('clear', async function () {
+    setValue('');
+    setExposedVariable('value', '');
+  });
   return (
     <textarea
-      disabled={parsedDisabledState}
-      onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}
+      disabled={styles.disabledState}
       onChange={(e) => {
-        setText(e.target.value);
-        onComponentOptionChanged(component, 'value', e.target.value);
+        setValue(e.target.value);
+        setExposedVariable('value', e.target.value);
       }}
       type="text"
-      className="form-control"
-      placeholder={placeholder}
-      style={{ width, height, display:parsedWidgetVisibility ? '' : 'none' }}
-      value={text}
+      className="form-control textarea"
+      placeholder={properties.placeholder}
+      style={{
+        height,
+        resize: 'none',
+        display: styles.visibility ? '' : 'none',
+        borderRadius: `${styles.borderRadius}px`,
+      }}
+      value={value}
     ></textarea>
   );
 };

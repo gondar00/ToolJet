@@ -1,71 +1,65 @@
-import React from 'react';
-import { resolveReferences, resolveWidgetFieldValue } from '@/_helpers/utils';
-
+import React, { useEffect } from 'react';
 class Switch extends React.Component {
-    render() {
-      const {
-        on,
-        onClick,
-        onChange,
-        disabledState
-      } = this.props
-      return (
-          <label className="form-check form-switch form-check-inline">
-            <input
-              disabled={disabledState}
-              className="form-check-input"
-              type="checkbox"
-              checked={on}
-              onChange={onChange}
-              onClick={onClick}
-            />
-        </label>
-      )
-    }
+  render() {
+    const { on, onClick, onChange, disabledState, color } = this.props;
+
+    return (
+      <label className="form-switch form-check-inline">
+        <input
+          style={{
+            backgroundColor: on ? `${color}` : 'white',
+            marginTop: '0px',
+          }}
+          disabled={disabledState}
+          className="form-check-input"
+          type="checkbox"
+          checked={on}
+          onChange={onChange}
+          onClick={onClick}
+        />
+      </label>
+    );
   }
+}
 
-export const ToggleSwitch = ({
-  id,
-  width,
-  height,
-  component,
-  onComponentClick,
-  currentState,
-  onComponentOptionChanged,
-  onEvent
-}) => {
-    
-  const [on, setOn] = React.useState(false)
-  const label = component.definition.properties.label.value;
-  const textColorProperty = component.definition.styles.textColor;
-  const textColor = textColorProperty ? textColorProperty.value : '#000';
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
+export const ToggleSwitch = ({ height, properties, styles, fireEvent, setExposedVariable }) => {
+  // definition props
+  const defaultValue = properties.defaultValue ?? false;
+  const [on, setOn] = React.useState(defaultValue);
+  const label = properties.label;
 
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
-
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
+  const { visibility, disabledState, toggleSwitchColor, textColor } = styles;
 
   function toggleValue(e) {
     const toggled = e.target.checked;
-    onComponentOptionChanged(component, 'value', toggled);
-    onEvent('onChange', { component });
-
+    setExposedVariable('value', toggled);
+    fireEvent('onChange');
   }
 
-  const toggle = () => setOn(!on)
+  // Exposing the initially set false value once on load
+  useEffect(() => {
+    setExposedVariable('value', defaultValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setOn(defaultValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
+
+  const toggle = () => setOn(!on);
 
   return (
-    <div className="row  py-1" style={{ width, height, display:parsedWidgetVisibility ? '' : 'none' }} onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}>
-        <span className="form-check-label form-check-label col-auto" style={{color: textColor}}>{label}</span>
-        <div className="col">
-          <Switch disabledState={parsedDisabledState} on={on} onClick={toggle} onChange={toggleValue} />
-        </div>
+    <div className="row py-1" style={{ height, display: visibility ? '' : 'none' }}>
+      <span className="form-check-label form-check-label col-auto my-auto" style={{ color: textColor }}>
+        {label}
+      </span>
+      <div className="col px-1 py-0 mt-0">
+        <Switch
+          disabledState={disabledState}
+          on={on}
+          onClick={toggle}
+          onChange={toggleValue}
+          color={toggleSwitchColor}
+        />
+      </div>
     </div>
   );
 };

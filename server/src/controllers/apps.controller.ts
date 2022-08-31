@@ -1,53 +1,61 @@
-import {
-  Controller,
-  ForbiddenException,
-  Get,
-  Param,
-  Post,
-  Put,
-  Delete,
-  Query,
-  Request,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Param, Post, Put, Delete, Query, UseGuards, Body } from '@nestjs/common';
 import { JwtAuthGuard } from '../../src/modules/auth/jwt-auth.guard';
 import { AppsService } from '../services/apps.service';
-import { decamelizeKeys } from 'humps';
+import { camelizeKeys, decamelizeKeys } from 'humps';
 import { AppsAbilityFactory } from 'src/modules/casl/abilities/apps-ability.factory';
 import { AppAuthGuard } from 'src/modules/auth/app-auth.guard';
 import { FoldersService } from '@services/folders.service';
+import { App } from 'src/entities/app.entity';
+import { AppImportExportService } from '@services/app_import_export.service';
+import { User } from 'src/decorators/user.decorator';
+import { AppUpdateDto } from '@dto/app-update.dto';
+import { VersionCreateDto } from '@dto/version-create.dto';
 
 @Controller('apps')
 export class AppsController {
   constructor(
     private appsService: AppsService,
+    private appImportExportService: AppImportExportService,
     private foldersService: FoldersService,
     private appsAbilityFactory: AppsAbilityFactory
   ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Request() req) {
-    const app = await this.appsService.create(req.user);
-    await this.appsService.update(req.user, app.id, {
-      slug: app.id,
-    });
+  async create(@User() user) {
+    const ability = await this.appsAbilityFactory.appsActions(user);
+
+    if (!ability.can('createApp', App)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
+    }
+    const app = await this.appsService.create(user);
+
+    const appUpdateDto = new AppUpdateDto();
+    appUpdateDto.slug = app.id;
+    await this.appsService.update(user, app.id, appUpdateDto);
 
     return decamelizeKeys(app);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async show(@Request() req, @Param() params) {
-    const app = await this.appsService.find(params.id);
-    let response = decamelizeKeys(app);
+  async show(@User() user, @Param('id') id) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
+
+    if (!ability.can('viewApp', app)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
+    }
+    const response = decamelizeKeys(app);
 
     const seralizedQueries = [];
+    const dataQueriesForVersion = app.editingVersion
+      ? await this.appsService.findDataQueriesForVersion(app.editingVersion.id)
+      : [];
 
     // serialize queries
-    for (const query of app.dataQueries) {
-      let decamelizedQuery = decamelizeKeys(query);
+    for (const query of dataQueriesForVersion) {
+      const decamelizedQuery = decamelizeKeys(query);
       decamelizedQuery['options'] = query.options;
       seralizedQueries.push(decamelizedQuery);
     }
@@ -55,31 +63,40 @@ export class AppsController {
     response['data_queries'] = seralizedQueries;
     response['definition'] = app.editingVersion?.definition;
 
+    //! if editing version exists, camelize the definition
+    if (app.editingVersion && app.editingVersion.definition) {
+      response['editing_version'] = {
+        ...response['editing_version'],
+        definition: camelizeKeys(app.editingVersion.definition),
+      };
+    }
     return response;
   }
 
   @UseGuards(AppAuthGuard) // This guard will allow access for unauthenticated user if the app is public
   @Get('slugs/:slug')
-  async appFromSlug(@Request() req, @Param() params) {
-    if (req.user) {
-      const app = await this.appsService.findBySlug(params.slug);
-      const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async appFromSlug(@User() user, @Param('slug') slug) {
+    if (user) {
+      const app = await this.appsService.findBySlug(slug);
+      const ability = await this.appsAbilityFactory.appsActions(user, app.id);
 
       if (!ability.can('viewApp', app)) {
-        throw new ForbiddenException(
-          'you do not have permissions to perform this action',
-        );
+        throw new ForbiddenException('You do not have permissions to perform this action');
       }
     }
 
-    const app = await this.appsService.findBySlug(params.slug);
+    const app = await this.appsService.findBySlug(slug);
+    const versionToLoad = app.currentVersionId
+      ? await this.appsService.findVersion(app.currentVersionId)
+      : await this.appsService.findVersion(app.editingVersion?.id);
 
     // serialize
     return {
-      current_version_id: app['current_version_id'],
-      data_queries: app.dataQueries,
-      definition: app.editingVersion?.definition,
+      current_version_id: app['currentVersionId'],
+      data_queries: versionToLoad?.dataQueries,
+      definition: versionToLoad?.definition,
       is_public: app.isPublic,
+      is_maintenance_on: app.isMaintenanceOn,
       name: app.name,
       slug: app.slug,
     };
@@ -87,69 +104,108 @@ export class AppsController {
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
-  async update(@Request() req, @Param() params) {
-    const app = await this.appsService.find(params.id);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async update(@User() user, @Param('id') id, @Body('app') appUpdateDto: AppUpdateDto) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
     if (!ability.can('updateParams', app)) {
-      throw new ForbiddenException(
-        'you do not have permissions to perform this action',
-      );
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
-    const result = await this.appsService.update(
-      req.user,
-      params.id,
-      req.body.app,
-    );
-    let response = decamelizeKeys(result);
+    const result = await this.appsService.update(user, id, appUpdateDto);
+    const response = decamelizeKeys(result);
 
     return response;
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  async delete(@Request() req, @Param() params) {
-    const app = await this.appsService.find(params.id);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  @Post(':id/clone')
+  async clone(@User() user, @Param('id') id) {
+    const existingApp = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
-    if (!ability.can('deleteApp', app)) {
-      throw new ForbiddenException(
-        'Only administrators are allowed to delete apps.',
-      );
+    if (!ability.can('cloneApp', existingApp)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
-    const result = await this.appsService.delete(params.id);
-    let response = decamelizeKeys(result);
+    const result = await this.appsService.clone(existingApp, user);
+    const response = decamelizeKeys(result);
+
+    return response;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/export')
+  async export(@User() user, @Param('id') id) {
+    const appToExport = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
+
+    if (!ability.can('viewApp', appToExport)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
+    }
+
+    const app = await this.appImportExportService.export(user, id);
+    return {
+      ...app,
+      tooljetVersion: globalThis.TOOLJET_VERSION,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/import')
+  async import(@User() user, @Body() body) {
+    const ability = await this.appsAbilityFactory.appsActions(user);
+
+    if (!ability.can('createApp', App)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
+    }
+    await this.appImportExportService.import(user, body);
+
+    return;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async delete(@User() user, @Param('id') id) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
+
+    if (!ability.can('deleteApp', app)) {
+      throw new ForbiddenException('Only administrators are allowed to delete apps.');
+    }
+
+    const result = await this.appsService.delete(id);
+    const response = decamelizeKeys(result);
 
     return response;
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async index(@Request() req, @Query() query) {
-    const page = req.query.page;
-    const folderId = req.query.folder;
+  async index(@User() user, @Query() query) {
+    const page = query.page;
+    const folderId = query.folder;
+    const searchKey = query.searchKey || '';
 
     let apps = [];
-    let folderCount = 0;
+    let totalFolderCount = 0;
 
     if (folderId) {
       const folder = await this.foldersService.findOne(folderId);
-      apps = await this.foldersService.getAppsFor(req.user, folder, page);
-      folderCount = await this.foldersService.userAppCount(req.user, folder);
+      apps = await this.foldersService.getAppsFor(user, folder, page, searchKey);
+      totalFolderCount = await this.foldersService.userAppCount(user, folder, searchKey);
     } else {
-      apps = await this.appsService.all(req.user, page);
+      apps = await this.appsService.all(user, page, searchKey);
     }
 
-    let totalCount = await this.appsService.count(req.user);
+    const totalCount = await this.appsService.count(user, searchKey);
 
-    const totalPageCount = folderId ? folderCount : totalCount;
+    const totalPageCount = folderId ? totalFolderCount : totalCount;
 
     const meta = {
       total_pages: Math.ceil(totalPageCount / 10),
       total_count: totalCount,
-      folder_count: folderCount,
+      folder_count: totalFolderCount,
       current_page: parseInt(page || 1),
     };
 
@@ -161,96 +217,109 @@ export class AppsController {
     return decamelizeKeys(response);
   }
 
+  // deprecated
   @UseGuards(JwtAuthGuard)
   @Get(':id/users')
-  async fetchUsers(@Request() req, @Param() params) {
-    const app = await this.appsService.find(params.id);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async fetchUsers(@User() user, @Param('id') id) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
     if (!ability.can('fetchUsers', app)) {
-      throw new ForbiddenException(
-        'you do not have permissions to perform this action',
-      );
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
-    const result = await this.appsService.fetchUsers(req.user, params.id);
+    const result = await this.appsService.fetchUsers(user, id);
     return decamelizeKeys({ users: result });
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/versions')
-  async fetchVersions(@Request() req, @Param() params) {
-    const app = await this.appsService.find(params.id);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async fetchVersions(@User() user, @Param('id') id) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
     if (!ability.can('fetchVersions', app)) {
-      throw new ForbiddenException(
-        'you do not have permissions to perform this action',
-      );
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
-    const result = await this.appsService.fetchVersions(req.user, params.id);
+    const result = await this.appsService.fetchVersions(user, id);
     return { versions: result };
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/versions')
-  async createVersion(@Request() req, @Param() params) {
-    const versionName = req.body['versionName'];
-
-    const app = await this.appsService.find(params.id);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async createVersion(@User() user, @Param('id') id, @Body() versionCreateDto: VersionCreateDto) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
     if (!ability.can('createVersions', app)) {
-      throw new ForbiddenException(
-        'you do not have permissions to perform this action',
-      );
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
     const appUser = await this.appsService.createVersion(
-      req.user,
+      user,
       app,
-      versionName,
+      versionCreateDto.versionName,
+      versionCreateDto.versionFromId
     );
     return decamelizeKeys(appUser);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/versions/:versionId')
-  async version(@Request() req, @Param() params) {
-    const app = await this.appsService.find(params.id);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async version(@User() user, @Param('id') id, @Param('versionId') versionId) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
     if (!ability.can('fetchVersions', app)) {
-      throw new ForbiddenException(
-        'you do not have permissions to perform this action',
-      );
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
-    const appVersion = await this.appsService.findVersion(params.versionId);
+    const appVersion = await this.appsService.findVersion(versionId);
 
-    return { ...appVersion, data_queries: app.dataQueries };
+    return { ...appVersion, data_queries: appVersion.dataQueries };
   }
 
   @UseGuards(JwtAuthGuard)
   @Put(':id/versions/:versionId')
-  async updateVersion(@Request() req, @Param() params) {
-    const definition = req.body['definition'];
-
-    const version = await this.appsService.findVersion(params.versionId);
-    const ability = await this.appsAbilityFactory.appsActions(req.user, {});
+  async updateVersion(@User() user, @Param('id') id, @Param('versionId') versionId, @Body() body) {
+    const version = await this.appsService.findVersion(versionId);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
 
     if (!ability.can('updateVersions', version.app)) {
-      throw new ForbiddenException(
-        'you do not have permissions to perform this action',
-      );
+      throw new ForbiddenException('You do not have permissions to perform this action');
     }
 
-    const appUser = await this.appsService.updateVersion(
-      req.user,
-      version,
-      definition,
-    );
+    const appUser = await this.appsService.updateVersion(user, version, body);
+    return decamelizeKeys(appUser);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/versions/:versionId')
+  async deleteVersion(@User() user, @Param('id') id, @Param('versionId') versionId) {
+    const version = await this.appsService.findVersion(versionId);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
+
+    if (!version || !ability.can('deleteVersions', version.app)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
+    }
+
+    return await this.appsService.deleteVersion(version.app, version);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':id/icons')
+  async updateIcon(@User() user, @Param('id') id, @Body('icon') icon) {
+    const app = await this.appsService.find(id);
+    const ability = await this.appsAbilityFactory.appsActions(user, id);
+
+    if (!ability.can('updateIcon', app)) {
+      throw new ForbiddenException('You do not have permissions to perform this action');
+    }
+
+    const appUpdateDto = new AppUpdateDto();
+    appUpdateDto.icon = icon;
+    const appUser = await this.appsService.update(user, id, appUpdateDto);
     return decamelizeKeys(appUser);
   }
 }

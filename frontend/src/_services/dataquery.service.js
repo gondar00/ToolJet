@@ -7,21 +7,26 @@ export const dataqueryService = {
   run,
   update,
   del,
-  preview
+  preview,
 };
 
-function getAll(appId) {
+function getAll(appId, appVersionId) {
   const requestOptions = { method: 'GET', headers: authHeader() };
-  return fetch(`${config.apiUrl}/data_queries?app_id=${appId}`, requestOptions).then(handleResponse);
+
+  let searchParams = new URLSearchParams(`app_id=${appId}`);
+  appVersionId && searchParams.append('app_version_id', appVersionId);
+
+  return fetch(`${config.apiUrl}/data_queries?` + searchParams, requestOptions).then(handleResponse);
 }
 
-function create(app_id, name, kind, options, data_source_id) {
+function create(app_id, app_version_id, name, kind, options, data_source_id) {
   const body = {
     app_id,
+    app_version_id,
     name,
     kind,
     options,
-    data_source_id
+    data_source_id: kind === 'runjs' ? null : data_source_id,
   };
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
@@ -31,7 +36,7 @@ function create(app_id, name, kind, options, data_source_id) {
 function update(id, name, options) {
   const body = {
     options,
-    name
+    name,
   };
 
   const requestOptions = { method: 'PATCH', headers: authHeader(), body: JSON.stringify(body) };
@@ -45,7 +50,7 @@ function del(id) {
 
 function run(queryId, options) {
   const body = {
-    options: options
+    options: options,
   };
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
@@ -55,7 +60,7 @@ function run(queryId, options) {
 function preview(query, options) {
   const body = {
     query,
-    options: options
+    options: options,
   };
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };

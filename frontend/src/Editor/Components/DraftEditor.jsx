@@ -1,5 +1,6 @@
+/* eslint-disable react/no-string-refs */
 import React from 'react';
-import { Editor, EditorState, RichUtils, getDefaultKeyBinding } from 'draft-js';
+import { Editor, EditorState, RichUtils, getDefaultKeyBinding, ContentState } from 'draft-js';
 import 'draft-js/dist/Draft.css';
 import { stateToHTML } from 'draft-js-export-html';
 
@@ -45,27 +46,30 @@ class StyleButton extends React.Component {
   }
 }
 
-const BLOCK_TYPES = [
+const HEADINGS = [
   { label: 'H1', style: 'header-one' },
   { label: 'H2', style: 'header-two' },
   { label: 'H3', style: 'header-three' },
   { label: 'H4', style: 'header-four' },
   { label: 'H5', style: 'header-five' },
   { label: 'H6', style: 'header-six' },
+];
+
+const BLOCK_TYPES = [
   {
-    label: <img src="/assets/images/icons/rich-text-editor/blockquote.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/blockquote.svg" style={{ height: '16px' }} />,
     style: 'blockquote',
   },
   {
-    label: <img src="/assets/images/icons/rich-text-editor/ul.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/ul.svg" style={{ height: '16px' }} />,
     style: 'unordered-list-item',
   },
   {
-    label: <img src="/assets/images/icons/rich-text-editor/ol.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/ol.svg" style={{ height: '16px' }} />,
     style: 'ordered-list-item',
   },
   {
-    label: <img src="/assets/images/icons/rich-text-editor/codeblock.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/codeblock.svg" style={{ height: '16px' }} />,
     style: 'code-block',
   },
 ];
@@ -77,6 +81,24 @@ const BlockStyleControls = (props) => {
 
   return (
     <>
+      <div className="dropmenu">
+        <button className="dropdownbtn px-2" type="button">
+          Heading
+        </button>
+        <div className="dropdown-content bg-white">
+          {HEADINGS.map((type) => (
+            <a className="dropitem m-0 p-0" href="#" key={type.label}>
+              <StyleButton
+                key={type.label}
+                active={type.style === blockType}
+                label={type.label}
+                onToggle={props.onToggle}
+                style={type.style}
+              />
+            </a>
+          ))}
+        </div>
+      </div>
       {BLOCK_TYPES.map((type) => (
         <StyleButton
           key={type.label}
@@ -92,15 +114,15 @@ const BlockStyleControls = (props) => {
 
 var INLINE_STYLES = [
   {
-    label: <img src="/assets/images/icons/rich-text-editor/bold.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/bold.svg" style={{ height: '16px' }} />,
     style: 'BOLD',
   },
   {
-    label: <img src="/assets/images/icons/rich-text-editor/italic.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/italic.svg" style={{ height: '16px' }} />,
     style: 'ITALIC',
   },
   {
-    label: <img src="/assets/images/icons/rich-text-editor/underline.svg" style={{ height: '16px' }} />,
+    label: <img src="assets/images/icons/rich-text-editor/underline.svg" style={{ height: '16px' }} />,
     style: 'UNDERLINE',
   },
 ];
@@ -126,7 +148,9 @@ const InlineStyleControls = (props) => {
 class DraftEditor extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { editorState: EditorState.createEmpty() };
+    this.state = {
+      editorState: EditorState.createWithContent(ContentState.createFromText(this.props.defaultValue)),
+    };
 
     this.focus = () => this.refs.editor.focus();
     this.onChange = (editorState) => {
@@ -139,6 +163,18 @@ class DraftEditor extends React.Component {
     this.mapKeyToEditorCommand = this._mapKeyToEditorCommand.bind(this);
     this.toggleBlockType = this._toggleBlockType.bind(this);
     this.toggleInlineStyle = this._toggleInlineStyle.bind(this);
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.defaultValue !== this.props.defaultValue) {
+      const newContentState = ContentState.createFromText(this.props.defaultValue);
+      const newEditorState = EditorState.createWithContent(newContentState);
+      const newEditorStateWithFocus = EditorState.moveFocusToEnd(newEditorState);
+      const html = stateToHTML(newContentState);
+
+      this.props.handleChange(html);
+      this.setState({ editorState: newEditorStateWithFocus });
+    }
   }
 
   _handleKeyCommand(command, editorState) {
@@ -188,7 +224,7 @@ class DraftEditor extends React.Component {
           <BlockStyleControls editorState={editorState} onToggle={this.toggleBlockType} />
           <InlineStyleControls editorState={editorState} onToggle={this.toggleInlineStyle} />
         </div>
-        <div className={className} onClick={this.focus}>
+        <div className={className} style={{ height: `${this.props.height - 60}px` }} onClick={this.focus}>
           <Editor
             blockStyleFn={getBlockStyle}
             customStyleMap={styleMap}

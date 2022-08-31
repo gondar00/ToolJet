@@ -7,9 +7,10 @@ export const Pagination = function Pagination({
   autoCanNextPage,
   autoPageCount,
   autoPageOptions,
-  lastActivePageIndex
+  lastActivePageIndex,
+  pageIndex,
+  setPageIndex,
 }) {
-  const [pageIndex, setPageIndex] = useState(lastActivePageIndex ?? 1);
   const [pageCount, setPageCount] = useState(autoPageCount);
 
   useEffect(() => {
@@ -17,13 +18,15 @@ export const Pagination = function Pagination({
   }, [autoPageCount]);
 
   useEffect(() => {
-
-    if(serverSide && lastActivePageIndex > 0) {
-      setPageCount(lastActivePageIndex)
-    } else if(serverSide || lastActivePageIndex === 0) {
-      setPageIndex(1)
+    if (serverSide && lastActivePageIndex > 0) {
+      setPageCount(lastActivePageIndex);
+    } else if (serverSide || lastActivePageIndex === 0) {
+      setPageIndex(1);
+    } else {
+      gotoPage(lastActivePageIndex + 1);
     }
-  }, [serverSide, lastActivePageIndex ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverSide, lastActivePageIndex]);
 
   function gotoPage(page) {
     setPageIndex(page);
@@ -42,48 +45,47 @@ export const Pagination = function Pagination({
   }
 
   return (
-        <div className="pagination">
-            {!serverSide
-                && <button className="btn btn-sm btn-light mx-2" onClick={() => gotoPage(1)}>
-                {'<<'}
-                </button>
-            }
-            <button
-                className="btn btn-light btn-sm"
-                onClick={() => goToPreviousPage()}
-                disabled={pageIndex === 1}
-            >
-              {'<'}
-            </button>{' '}
-            <small className="p-1 mx-2">
-              
-              {serverSide && 
-                <strong>
-                  {pageIndex}
-                </strong>
-              }
-              {!serverSide && 
-                <strong>
-                  {pageIndex} of {autoPageOptions.length}
-                </strong>
-              }
-            </small>
-            <button
-                className="btn btn-light btn-sm"
-                onClick={() => goToNextPage()}
-                disabled={!autoCanNextPage && !serverSide}
-            >
-              {'>'}
-            </button>{' '}
-
-            {!serverSide
-                && <button
-                className="btn btn-light btn-sm mx-2"
-                onClick={() => gotoPage(pageCount)}
-                >
-                {'>>'}
-                </button>
-            }
-        </div>
+    <div className="pagination justify-content-start">
+      {!serverSide && (
+        <button
+          className={`btn btn-sm btn-light mx-2 ${pageIndex === 1 ? 'cursor-not-allowed' : ''}`}
+          onClick={() => gotoPage(1)}
+          disabled={pageIndex === 1}
+        >
+          {'<<'}
+        </button>
+      )}
+      <button
+        className={`btn btn-sm btn-light ${pageIndex === 1 ? 'cursor-not-allowed' : ''}`}
+        onClick={() => goToPreviousPage()}
+        disabled={pageIndex === 1}
+      >
+        {'<'}
+      </button>{' '}
+      <small className="p-1 mx-2">
+        {serverSide && <strong>{pageIndex}</strong>}
+        {!serverSide && (
+          <strong>
+            {pageIndex} of {autoPageOptions.length}
+          </strong>
+        )}
+      </small>
+      <button
+        className={`btn btn-light btn-sm ${!autoCanNextPage && !serverSide ? 'cursor-not-allowed' : ''}`}
+        onClick={() => goToNextPage()}
+        disabled={!autoCanNextPage && !serverSide}
+      >
+        {'>'}
+      </button>{' '}
+      {!serverSide && (
+        <button
+          className={`btn btn-light btn-sm mx-2 ${!autoCanNextPage && !serverSide ? 'cursor-not-allowed' : ''}`}
+          onClick={() => gotoPage(pageCount)}
+          disabled={!autoCanNextPage && !serverSide}
+        >
+          {'>>'}
+        </button>
+      )}
+    </div>
   );
 };

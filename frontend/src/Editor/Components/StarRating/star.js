@@ -37,6 +37,7 @@ const Star = ({
   React.useEffect(() => {
     setIcon(isHalfStar ? halfStar : star);
     setOutlineIcon(isHalfStar ? halfStar : starOutline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [color]);
 
   const ref = React.useRef(null);
@@ -47,7 +48,7 @@ const Star = ({
   }
 
   function roundValueToPrecision(value, precision) {
-    if (value == null) {
+    if (value === null || value === undefined) {
       return value;
     }
 

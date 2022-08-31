@@ -1,39 +1,57 @@
 import React from 'react';
 
 export const ConfigHandle = function ConfigHandle({
-    id,
-    component,
-    configHandleClicked,
-    dragRef,
-    removeComponent
+  id,
+  component,
+  dragRef,
+  removeComponent,
+  position,
+  widgetTop,
+  widgetHeight,
+  isMultipleComponentsSelected = false,
 }) {
-
-return <div className="config-handle" ref={dragRef}>
-         <span 
-          style={{cursor: 'move'}} 
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); configHandleClicked(id, component) }}
-          className="badge badge bg-azure-lt" 
+  return (
+    <div
+      className="config-handle"
+      ref={dragRef}
+      style={{
+        top: position === 'top' ? '-22px' : widgetTop + widgetHeight - 10,
+      }}
+    >
+      <span className="badge handle-content">
+        <div
+          style={{ display: 'flex', alignItems: 'center' }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           role="button"
+          data-cy={`${component.name.toLowerCase()}-config-handle`}
         >
-            <img 
-              style={{cursor: 'pointer'}} 
-              src="/assets/images/icons/menu.svg" 
-              width="8" 
-              height="8" 
-              style={{marginRight: '5px'}}
+          <img
+            style={{ cursor: 'pointer', marginRight: '5px', verticalAlign: 'middle' }}
+            src="assets/images/icons/settings.svg"
+            width="12"
+            height="12"
+            draggable="false"
+          />
+          <span>{component.name}</span>
+        </div>
+        {!isMultipleComponentsSelected && (
+          <div className="delete-part">
+            <img
+              style={{ cursor: 'pointer', marginLeft: '5px' }}
+              src="assets/images/icons/trash-light.svg"
+              width="12"
+              role="button"
+              height="12"
+              draggable="false"
+              onClick={() => removeComponent({ id })}
+              data-cy={`${component.name.toLowerCase()}-delete-button`}
             />
-            {component.name}
-
-         </span>
-         <img 
-          style={{cursor: 'pointer'}} 
-          src="/assets/images/icons/trash.svg" 
-          width="12" 
-          role="button"
-          className="mx-2"
-          height="12" 
-          onClick={() => removeComponent({id})}
-          style={{marginRight: '5px'}}
-        />
+          </div>
+        )}
+      </span>
     </div>
-}
+  );
+};

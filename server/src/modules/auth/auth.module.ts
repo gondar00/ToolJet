@@ -13,19 +13,39 @@ import { OrganizationsService } from 'src/services/organizations.service';
 import { OrganizationUsersService } from 'src/services/organization_users.service';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@services/email.service';
+import { OauthService, GoogleOAuthService, GitOAuthService } from '@ee/services/oauth';
+import { OauthController } from '@ee/controllers/oauth.controller';
+import { GroupPermission } from 'src/entities/group_permission.entity';
+import { App } from 'src/entities/app.entity';
+import { File } from 'src/entities/file.entity';
+import { FilesService } from '@services/files.service';
+import { SSOConfigs } from 'src/entities/sso_config.entity';
+import { GroupPermissionsService } from '@services/group_permissions.service';
+import { AppGroupPermission } from 'src/entities/app_group_permission.entity';
+import { UserGroupPermission } from 'src/entities/user_group_permission.entity';
+import { EncryptionService } from '@services/encryption.service';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
-    TypeOrmModule.forFeature([User, Organization, OrganizationUser]),
+    TypeOrmModule.forFeature([
+      User,
+      File,
+      Organization,
+      OrganizationUser,
+      GroupPermission,
+      App,
+      SSOConfigs,
+      AppGroupPermission,
+      UserGroupPermission,
+    ]),
     JwtModule.registerAsync({
       useFactory: (config: ConfigService) => {
         return {
           secret: config.get<string>('SECRET_KEY_BASE'),
           signOptions: {
-            expiresIn:
-              config.get<string | number>('JWT_EXPIRATION_TIME') || '30d',
+            expiresIn: config.get<string | number>('JWT_EXPIRATION_TIME') || '30d',
           },
         };
       },
@@ -38,8 +58,15 @@ import { EmailService } from '@services/email.service';
     UsersService,
     OrganizationsService,
     OrganizationUsersService,
-    EmailService
+    EmailService,
+    OauthService,
+    GoogleOAuthService,
+    GitOAuthService,
+    FilesService,
+    GroupPermissionsService,
+    EncryptionService,
   ],
+  controllers: [OauthController],
   exports: [AuthService],
 })
 export class AuthModule {}

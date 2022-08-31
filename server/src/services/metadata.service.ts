@@ -1,74 +1,128 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { createQueryBuilder, EntityManager, getManager, In, Repository } from 'typeorm';
 import { Metadata } from 'src/entities/metadata.entity';
 import { gt } from 'semver';
-const got = require('got');
+import got from 'got';
+import { User } from 'src/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
+
 @Injectable()
 export class MetadataService {
-
   constructor(
     @InjectRepository(Metadata)
     private metadataRepository: Repository<Metadata>,
-  ) { }
+    private configService: ConfigService
+  ) {}
 
   async getMetaData() {
     let metadata = await this.metadataRepository.findOne({});
 
-    if(!metadata) {
-      metadata = await this.metadataRepository.save(this.metadataRepository.create({
-        data: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+    if (!metadata) {
+      metadata = await this.metadataRepository.save(
+        this.metadataRepository.create({
+          data: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
     }
 
     return metadata;
   }
 
   async updateMetaData(newOptions: any) {
-    let metadata = await this.metadataRepository.findOne({});
+    const metadata = await this.metadataRepository.findOne({});
 
-    return await this.metadataRepository.update(metadata.id, { data: {...metadata.data, ...newOptions } });
+    return await this.metadataRepository.update(metadata.id, {
+      data: { ...metadata.data, ...newOptions },
+    });
   }
 
-  async finishInstallation(installedVersion: string, name: string, email: string) {
-    return await got('https://hub.tooljet.io/updates', { 
+  async finishInstallation(metadata: any, installedVersion: string, name: string, email: string, org: string) {
+    return await got('https://hub.tooljet.io/subscribe', {
       method: 'post',
-      json: { 
+      json: {
+        id: metadata.id,
         installed_version: installedVersion,
         name,
-        email
-      }
-    });  
+        email,
+        org,
+      },
+    });
   }
 
-  async checkForUpdates(installedVersion: string, ignoredVersion: string) {
+  async sendTelemetryData(metadata: Metadata) {
+    const manager = getManager();
+    const totalUserCount = await manager.count(User);
+    const totalEditorCount = await this.fetchTotalEditorCount(manager);
+    const totalViewerCount = await this.fetchTotalViewerCount(manager);
 
-    const response = await got('https://hub.tooljet.io/updates', { 
+    return await got('https://hub.tooljet.io/telemetry', {
       method: 'post',
-      json: { installed_version: installedVersion }
+      json: {
+        id: metadata.id,
+        total_users: totalUserCount,
+        total_editors: totalEditorCount,
+        total_viewers: totalViewerCount,
+        tooljet_version: globalThis.TOOLJET_VERSION,
+        deployment_platform: this.configService.get<string>('DEPLOYMENT_PLATFORM'),
+      },
     });
+  }
 
+  async checkForUpdates(metadata: Metadata) {
+    const installedVersion = globalThis.TOOLJET_VERSION;
+    const response = await got('https://hub.tooljet.io/updates', {
+      method: 'post',
+    });
     const data = JSON.parse(response.body);
     const latestVersion = data['latest_version'];
 
+    const newOptions = {
+      last_checked: new Date(),
+    };
 
-    let newOptions = {
-      'last_checked': new Date()
-    }
-
-    if(gt(latestVersion, installedVersion) && installedVersion !== ignoredVersion) {
-      newOptions['latest_version']  = latestVersion;
+    if (gt(latestVersion, installedVersion) && installedVersion !== metadata.data['ignored_version']) {
+      newOptions['latest_version'] = latestVersion;
       newOptions['version_ignored'] = false;
     }
 
     await this.updateMetaData(newOptions);
-
     return { latestVersion };
-
   }
 
-  
+  async fetchTotalEditorCount(manager: EntityManager) {
+    const userIdsWithEditPermissions = (
+      await manager
+        .createQueryBuilder(User, 'users')
+        .innerJoin('users.groupPermissions', 'group_permissions')
+        .innerJoin('group_permissions.appGroupPermission', 'app_group_permissions')
+        .where('app_group_permissions.read = true AND app_group_permissions.update = true')
+        .select('users.id')
+        .distinct()
+        .getMany()
+    ).map((record) => record.id);
 
+    const userIdsOfAppOwners = (
+      await createQueryBuilder(User, 'users').innerJoin('users.apps', 'apps').select('users.id').distinct().getMany()
+    ).map((record) => record.id);
+
+    const totalEditorCount = await manager.count(User, {
+      where: { id: In([...userIdsWithEditPermissions, ...userIdsOfAppOwners]) },
+    });
+
+    return totalEditorCount;
+  }
+
+  async fetchTotalViewerCount(manager: EntityManager) {
+    return await manager
+      .createQueryBuilder(User, 'users')
+      .innerJoin('users.groupPermissions', 'group_permissions')
+      .innerJoin('group_permissions.appGroupPermission', 'app_group_permissions')
+      .where('app_group_permissions.read = true AND app_group_permissions.update = false')
+      .select('users.id')
+      .distinct()
+      .getCount();
+  }
 }

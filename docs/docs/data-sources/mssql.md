@@ -1,5 +1,6 @@
 ---
-sidebar_position: 3
+id: mssql
+title: MS SQL Server / Azure SQL databases
 ---
 
 # MS SQL Server / Azure SQL databases
@@ -23,13 +24,13 @@ ToolJet requires the following to connect to your PostgreSQL database.
 
 It is recommended to create a new database user so that you can control the access levels of ToolJet. 
 
-Click on 'Test connection' button to verify if the credentials are correct and that the database is accessible to ToolJet server. Click on 'Save' button to save the datasource.
+Click on 'Test connection' button to verify if the credentials are correct and that the database is accessible to ToolJet server. Click on 'Save' button to save the data source.
 
 <img src="/img/datasource-reference/mssql/connect.gif" alt="ToolJet - Redis connection" height="420"/>
 
 
 ## Querying SQL Server / Azure SQL databases
-Click on '+' button of the query manager at the bottom panel of the editor and select the database added in the previous step as the datasource. 
+Click on '+' button of the query manager at the bottom panel of the editor and select the database added in the previous step as the data source. 
 
 Click on the 'run' button to run the query. NOTE: Query should be saved before running.
 
@@ -37,5 +38,5 @@ Click on the 'run' button to run the query. NOTE: Query should be saved before r
 
 
 :::tip
-Query results can be transformed using transformations. Read our transformations documentation to see how: [link](/tutorial/transformations)
+Query results can be transformed using transformations. Read our transformations documentation to see how: [link](/docs/tutorial/transformations)
 :::

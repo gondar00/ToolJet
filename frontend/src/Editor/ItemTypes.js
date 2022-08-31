@@ -1,3 +1,5 @@
 export const ItemTypes = {
-  BOX: 'box'
+  BOX: 'box',
+  COMMENT: 'comment',
+  NEW_COMMENT: 'new_comment',
 };

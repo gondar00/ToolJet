@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import config from 'config';
+import { toast } from 'react-hot-toast';
+import { validateEmail } from '../_helpers/utils';
+import { authenticationService } from '@/_services';
 
 class ForgotPassword extends React.Component {
   constructor(props) {
@@ -19,24 +20,32 @@ class ForgotPassword extends React.Component {
 
   handleClick = (event) => {
     event.preventDefault();
-    fetch(`${config.apiUrl}/forgot_password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email: this.state.email }),
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error, { toastId: 'toast-forgot-password-email-error' });
-        } else {
-          toast.success(res.message, { toastId: 'toast-forgot-password-confirmation-code' });
-          this.props.history.push('/reset-password');
-        }
+
+    if (!validateEmail(this.state.email)) {
+      toast.error('Invalid email', {
+        id: 'toast-forgot-password-email-error',
+      });
+      return;
+    }
+
+    this.setState({ isLoading: true });
+
+    authenticationService
+      .forgotPassword(this.state.email)
+      .then(() => {
+        toast.success('Password reset link sent to the email id, please check your mail', {
+          id: 'toast-forgot-password-confirmation-code',
+        });
+        this.props.history.push('/login');
       })
-      .catch(console.log);
+      .catch((res) => {
+        toast.error(res.error || 'Something went wrong, please try again', {
+          id: 'toast-forgot-password-email-error',
+        });
+        this.setState({ isLoading: false });
+      });
   };
+
   render() {
     const { isLoading } = this.state;
 
@@ -44,8 +53,8 @@ class ForgotPassword extends React.Component {
       <div className="page page-center">
         <div className="container-tight py-2">
           <div className="text-center mb-4">
-            <a href=".">
-              <img src="/assets/images/logo-text.svg" height="30" alt="" />
+            <a href="." className="navbar-brand-autodark">
+              <img src="assets/images/logo-color.svg" height="30" alt="" />
             </a>
           </div>
           <form className="card card-md" action="." method="get" autoComplete="off">
@@ -67,8 +76,9 @@ class ForgotPassword extends React.Component {
                   data-testid="submitButton"
                   className={`btn btn-primary w-100 ${isLoading ? 'btn-loading' : ''}`}
                   onClick={this.handleClick}
+                  disabled={isLoading || !this.state.email}
                 >
-                  Submit
+                  Reset Password
                 </button>
               </div>
             </div>

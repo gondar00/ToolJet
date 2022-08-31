@@ -1,23 +1,41 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, BeforeInsert, BeforeUpdate, OneToMany, ManyToOne, JoinColumn, AfterLoad, BaseEntity } from 'typeorm';
-import { Organization } from './organization.entity';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
+  OneToMany,
+  BaseEntity,
+  ManyToMany,
+  JoinTable,
+  OneToOne,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
+import { App } from './app.entity';
+import { GroupPermission } from './group_permission.entity';
 const bcrypt = require('bcrypt');
 import { OrganizationUser } from './organization_user.entity';
+import { UserGroupPermission } from './user_group_permission.entity';
+import { File } from './file.entity';
+import { Organization } from './organization.entity';
 
-@Entity({ name: "users" })
+@Entity({ name: 'users' })
 export class User extends BaseEntity {
-
   @BeforeInsert()
   @BeforeUpdate()
-  hashPassword() {
+  hashPassword(): void {
     if (this.password) {
       this.password = bcrypt.hashSync(this.password, 10);
     }
   }
 
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column( { name: 'first_name' } )
+  @Column({ name: 'first_name' })
   firstName: string;
 
   @Column({ name: 'last_name' })
@@ -26,6 +44,9 @@ export class User extends BaseEntity {
   @Column()
   email: string;
 
+  @Column({ name: 'avatar_id', nullable: true, default: null })
+  avatarId?: string;
+
   @Column({ name: 'invitation_token' })
   invitationToken: string;
 
@@ -33,33 +54,55 @@ export class User extends BaseEntity {
   forgotPasswordToken: string;
 
   @Column({ name: 'password_digest' })
-  password: string
+  password: string;
 
-  @Column({ name: 'organization_id' }) 
-  organizationId: string
+  @Column({ name: 'organization_id' })
+  defaultOrganizationId: string;
+
+  @Column({ name: 'role' })
+  role: string;
+
+  @Column({ name: 'password_retry_count' })
+  passwordRetryCount: number;
 
   @CreateDateColumn({ default: () => 'now()', name: 'created_at' })
   createdAt: Date;
-  
+
   @UpdateDateColumn({ default: () => 'now()', name: 'updated_at' })
   updatedAt: Date;
 
-  @OneToMany(() => OrganizationUser, organizationUser => organizationUser.user, { eager: true })
+  @OneToMany(() => OrganizationUser, (organizationUser) => organizationUser.user, { eager: true })
   organizationUsers: OrganizationUser[];
 
-  @ManyToOne(() => Organization, organization => organization.id)
-  @JoinColumn({ name: "organization_id" })
+  @ManyToOne(() => Organization, (organization) => organization.id)
+  @JoinColumn({ name: 'organization_id' })
   organization: Organization;
 
-  public isAdmin;
-  public isDeveloper;
-  public role;
+  @JoinColumn({ name: 'avatar_id' })
+  @OneToOne(() => File, {
+    nullable: true,
+  })
+  avatar?: File;
 
-  @AfterLoad()
-  computeUserRole(): void {
-    this.isAdmin = this.organizationUsers[0].role === 'admin';
-    this.isDeveloper = this.organizationUsers[0].role === 'developer';
-    this.role = this.organizationUsers[0].role;
-  }
+  @ManyToMany(() => GroupPermission)
+  @JoinTable({
+    name: 'user_group_permissions',
+    joinColumn: {
+      name: 'user_id',
+    },
+    inverseJoinColumn: {
+      name: 'group_permission_id',
+    },
+  })
+  groupPermissions: Promise<GroupPermission[]>;
 
+  @OneToMany(() => UserGroupPermission, (userGroupPermission) => userGroupPermission.user, { onDelete: 'CASCADE' })
+  userGroupPermissions: UserGroupPermission[];
+
+  @OneToMany(() => App, (app) => app.user)
+  apps: App[];
+
+  organizationId: string;
+  isPasswordLogin: boolean;
+  isSSOLogin: boolean;
 }

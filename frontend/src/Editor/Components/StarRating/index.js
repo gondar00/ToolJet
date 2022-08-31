@@ -2,37 +2,19 @@ import '@/_styles/widgets/star-rating.scss';
 
 import React from 'react';
 import { useTrail } from 'react-spring';
-import { resolveReferences, resolveWidgetFieldValue } from '@/_helpers/utils';
 
 import Star from './star';
 
-export const StarRating = function StarRating({
-  id,
-  component,
-  onComponentClick,
-  onComponentOptionChanged,
-  currentState,
-  onEvent,
-}) {
-  const label = component.definition.properties.label.value;
-  const defaultSelected = +component.definition.properties.defaultSelected.value ?? 5;
-  const maxRating = +component.definition.properties.maxRating.value ?? 5;
-  const allowHalfStar = component.definition.properties.allowHalfStar.value ?? false;
-  const textColorProperty = component.definition.styles.textColor;
-  const color = textColorProperty ? textColorProperty.value : '#ffb400';
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
+export const StarRating = function StarRating({ properties, styles, fireEvent, setExposedVariable, darkMode }) {
+  const label = properties.label;
+  const defaultSelected = properties.defaultSelected ?? 5;
+  const maxRating = properties.maxRating ?? 5;
+  const allowHalfStar = properties.allowHalfStar ?? false;
+  const tooltips = properties.tooltips;
 
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
-
-  const tooltips = component.definition.properties.tooltips.value ?? [];
-  const _tooltips = resolveReferences(tooltips, currentState, []) ?? [];
+  const { visibility, disabledState, textColor, labelColor } = styles;
+  const color = textColor ?? '#ffb400';
+  const labelColorStyle = labelColor === '#333' ? (darkMode ? '#fff' : '#333') : labelColor;
 
   const animatedStars = useTrail(maxRating, {
     config: {
@@ -53,19 +35,21 @@ export const StarRating = function StarRating({
 
   React.useEffect(() => {
     setRatingIndex(defaultSelected - 1);
-    onComponentOptionChanged(component, 'value', defaultSelected);
+    setExposedVariable('value', defaultSelected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultSelected]);
 
   React.useEffect(() => {
     setTimeout(() => {
-      onComponentOptionChanged(component, 'value', defaultSelected);
-    }, 1000)
+      setExposedVariable('value', defaultSelected);
+    }, 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleClick(idx) {
     // +1 cos code is considering index from 0,1,2.....
-    onComponentOptionChanged(component, 'value', idx + 1);
-    onEvent('onChange', { component });
+    setExposedVariable('value', idx + 1);
+    fireEvent('onChange');
   }
 
   const getActive = (index) => {
@@ -79,35 +63,36 @@ export const StarRating = function StarRating({
   };
 
   const getTooltip = (index) => {
-    if (_tooltips && Array.isArray(_tooltips) && _tooltips.length > 0) return _tooltips[index];
+    if (tooltips && Array.isArray(tooltips) && tooltips.length > 0) return tooltips[index];
     return '';
   };
 
   return (
-    <div data-disabled={parsedDisabledState} className="star-rating" onClick={event => {event.stopPropagation(); onComponentClick(id, component)}} style={{display:parsedWidgetVisibility ? '' : 'none'}}>
-      {/* TODO: Add label color defination property instead of hardcoded color*/}
-      <span className="label form-check-label form-check-label col-auto" style={{ color: '#000' }}>
+    <div data-disabled={disabledState} className="star-rating" style={{ display: visibility ? '' : 'none' }}>
+      <span className="label form-check-label col-auto" style={{ color: labelColorStyle }}>
         {label}
       </span>
-      {animatedStars.map((props, index) => (
-        <Star
-          tooltip={getTooltip(index)}
-          active={getActive(index)}
-          isHalfStar={isHalfStar(index)}
-          maxRating={maxRating}
-          onClick={(e, idx) => {
-            e.stopPropagation();
-            setRatingIndex(idx);
-            handleClick(idx);
-          }}
-          allowHalfStar={allowHalfStar}
-          key={index}
-          index={index}
-          color={color}
-          style={{ ...props }}
-          setHoverIndex={setHoverIndex}
-        />
-      ))}
+      <div className="col px-1 py-0 mt-0">
+        {animatedStars.map((props, index) => (
+          <Star
+            tooltip={getTooltip(index)}
+            active={getActive(index)}
+            isHalfStar={isHalfStar(index)}
+            maxRating={maxRating}
+            onClick={(e, idx) => {
+              e.stopPropagation();
+              setRatingIndex(idx);
+              handleClick(idx);
+            }}
+            allowHalfStar={allowHalfStar}
+            key={index}
+            index={index}
+            color={color}
+            style={{ ...props }}
+            setHoverIndex={setHoverIndex}
+          />
+        ))}
+      </div>
     </div>
   );
 };

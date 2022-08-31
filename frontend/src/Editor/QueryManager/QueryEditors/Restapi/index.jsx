@@ -1,41 +1,52 @@
 import 'codemirror/theme/duotone-light.css';
 
 import React from 'react';
-import SelectSearch, { fuzzySearch } from 'react-select-search';
-import { isEmpty, defaults } from 'lodash'
+import { isEmpty, defaults } from 'lodash';
 import Tabs from './Tabs';
-
+import Select from '@/_ui/Select';
 import { changeOption } from '../utils';
 import { CodeHinter } from '../../../CodeBuilder/CodeHinter';
+import { BaseUrl } from './BaseUrl';
 
 class Restapi extends React.Component {
   constructor(props) {
     super(props);
-    const options = defaults({...props.options}, {headers: [], url_params: [], body: []})
+    const options = defaults(
+      { ...props.options },
+      { headers: [], url_params: [], body: [], json_body: null, body_toggle: false }
+    );
     this.state = {
-      options
+      options,
     };
   }
 
   componentDidMount() {
     try {
-      if(isEmpty(this.state.options['headers'])) {
+      if (isEmpty(this.state.options['headers'])) {
         this.addNewKeyValuePair('headers');
       }
       setTimeout(() => {
-        if(isEmpty(this.state.options['url_params'])) {
+        if (isEmpty(this.state.options['url_params'])) {
           this.addNewKeyValuePair('url_params');
         }
       }, 1000);
       setTimeout(() => {
-        if(isEmpty(this.state.options['body'])) {
+        if (isEmpty(this.state.options['body'])) {
           this.addNewKeyValuePair('body');
         }
       }, 1000);
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
+
+  onBodyToggleChanged = (value) => {
+    const { options } = this.state;
+    options['body_toggle'] = value;
+    this.setState({ options }, () => {
+      this.props.optionsChanged(options);
+    });
+  };
 
   addNewKeyValuePair = (option) => {
     const { options } = this.state;
@@ -51,14 +62,23 @@ class Restapi extends React.Component {
     options[option].splice(index, 1);
 
     this.setState({ options }, () => {
-      this.props.optionsChanged(options);
+      this.props.optionsChanged({ ...options, arrayValuesChanged: true });
     });
   };
 
   keyValuePairValueChanged = (value, keyIndex, option, index) => {
     const { options } = this.state;
-
+    const prevValue = options[option][index][keyIndex];
     options[option][index][keyIndex] = value;
+
+    this.setState({ options }, () => {
+      this.props.optionsChanged({ ...options, arrayValuesChanged: prevValue !== value });
+    });
+  };
+
+  handleJsonBodyChanged = (jsonBody) => {
+    const { options } = this.state;
+    options['json_body'] = jsonBody;
 
     this.setState({ options }, () => {
       this.props.optionsChanged(options);
@@ -66,76 +86,75 @@ class Restapi extends React.Component {
   };
 
   handleChange = (key, keyIndex, idx) => (value) => {
-    if (this.state.options[key].length - 1 === idx) this.addNewKeyValuePair(key);
+    const lastPair = this.state.options[key][idx];
+    if (this.state.options[key].length - 1 === idx && (lastPair[0] || lastPair[1])) this.addNewKeyValuePair(key);
     this.keyValuePairValueChanged(value, keyIndex, key, idx);
   };
 
   render() {
     const { options } = this.state;
     const dataSourceURL = this.props.selectedDataSource?.options?.url?.value;
+    const queryName = this.props.queryName;
+
+    const currentValue = { label: options.method?.toUpperCase(), value: options.method };
     return (
       <div>
-        <div className="mb-3 mt-2">
-          <div className="mb-3">
-            <div className="row g-2">
-              <div className="col-auto" style={{ width: '120px' }}>
-                <SelectSearch
-                  options={[
-                    { name: 'GET', value: 'get' },
-                    { name: 'POST', value: 'post' },
-                    { name: 'PUT', value: 'put' },
-                    { name: 'PATCH', value: 'patch' },
-                    { name: 'DELETE', value: 'delete' },
-                  ]}
-                  value={options.method === '' ? 'get' : options.method}
-                  search={false}
-                  closeOnSelect={true}
-                  onChange={(value) => {
-                    changeOption(this, 'method', value);
-                  }}
-                  filterOptions={fuzzySearch}
-                  placeholder="Method"
-                />
-              </div>
+        <div className="row mt-2" style={{ height: 'fit-content' }}>
+          <div className="col-auto rest-methods-options" style={{ width: '90px' }}>
+            <Select
+              options={[
+                { label: 'GET', value: 'get' },
+                { label: 'POST', value: 'post' },
+                { label: 'PUT', value: 'put' },
+                { label: 'PATCH', value: 'patch' },
+                { label: 'DELETE', value: 'delete' },
+              ]}
+              onChange={(value) => {
+                changeOption(this, 'method', value);
+              }}
+              value={currentValue}
+              defaultValue={{ label: 'GET', value: 'get' }}
+              placeholder="Method"
+              width={100}
+              height={32}
+            />
+          </div>
 
-              <div className="col" style={{ display: 'flex' }}>
-                {dataSourceURL && (
-                  <span
-                    htmlFor=""
-                    style={{
-                      padding: '7px',
-                      border: '1px solid rgb(217 220 222)',
-                      background: 'rgb(246 247 251)',
-                      color: '#9ca1a6',
-                      marginRight: '-3px',
-                      borderTopLeftRadius: '3px',
-                      borderBottomLeftRadius: '3px',
-                      zIndex: 1,
-                    }}
-                  >
-                    {dataSourceURL}
-                  </span>
-                )}
-                <CodeHinter
-                  currentState={this.props.currentState}
-                  initialValue={options.url}
-                  height="36px"
-                  className="codehinter-query-editor-input"
-                  theme={this.props.darkMode ? 'monokai' : 'default'}
-                  onChange={(value) => {
-                    changeOption(this, 'url', value);
-                  }}
-                  placeholder="Enter request URL"
-                />
-              </div>
+          <div className="col field w-100" style={{ display: 'flex', marginLeft: 16 }}>
+            {dataSourceURL && (
+              <BaseUrl theme={this.props.darkMode ? 'monokai' : 'default'} dataSourceURL={dataSourceURL} />
+            )}
+            <div className="col">
+              <CodeHinter
+                currentState={this.props.currentState}
+                initialValue={options.url}
+                theme={this.props.darkMode ? 'monokai' : 'default'}
+                onChange={(value) => {
+                  changeOption(this, 'url', value);
+                }}
+                placeholder="Enter request URL"
+                componentName={`${queryName}::url`}
+                mode="javascript"
+                lineNumbers={false}
+                height={'32px'}
+              />
             </div>
           </div>
+        </div>
+
+        <div className={`query-pane-restapi-tabs mt-3 ${this.props.darkMode ? 'dark' : ''}`}>
           <Tabs
             theme={this.props.darkMode ? 'monokai' : 'default'}
             options={this.state.options}
             currentState={this.props.currentState}
             onChange={this.handleChange}
+            onJsonBodyChange={this.handleJsonBodyChanged}
             removeKeyValuePair={this.removeKeyValuePair}
+            addNewKeyValuePair={this.addNewKeyValuePair}
+            darkMode={this.props.darkMode}
+            componentName={queryName}
+            bodyToggle={this.state.options.body_toggle}
+            setBodyToggle={this.onBodyToggleChanged}
           />
         </div>
       </div>

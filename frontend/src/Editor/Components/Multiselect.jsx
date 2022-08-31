@@ -1,72 +1,143 @@
+import _ from 'lodash';
 import React, { useState, useEffect } from 'react';
-import { resolveReferences, resolveWidgetFieldValue } from '@/_helpers/utils';
-import SelectSearch, { fuzzySearch } from 'react-select-search';
+import { MultiSelect } from 'react-multi-select-component';
+
+const ItemRenderer = ({ checked, option, onClick, disabled }) => (
+  <div className={`item-renderer ${disabled && 'disabled'}`}>
+    <input type="checkbox" onClick={onClick} checked={checked} tabIndex={-1} disabled={disabled} />
+    <span>{option.label}</span>
+  </div>
+);
 
 export const Multiselect = function Multiselect({
   id,
-  width,
-  height,
   component,
+  height,
+  properties,
+  styles,
+  exposedVariables,
+  setExposedVariable,
   onComponentClick,
-  currentState,
-  onComponentOptionChanged
+  darkMode,
+  fireEvent,
+  registerAction,
 }) {
-  console.log('currentState', currentState);
+  const { label, value, values, display_values, showAllOption } = properties;
+  const { borderRadius, visibility, disabledState } = styles;
+  const [selected, setSelected] = useState([]);
 
-  const label = component.definition.properties.label.value;
-  const values = component.definition.properties.option_values.value;
-  const displayValues = component.definition.properties.display_values.value;
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
-
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
-  const parsedValues = JSON.parse(values);
-  const parsedDisplayValues = JSON.parse(displayValues);
-
-  const selectOptions = [
-    ...parsedValues.map((value, index) => {
-      return { name: parsedDisplayValues[index], value: value };
-    })
-  ];
-
-  const currentValueProperty = component.definition.properties.values;
-  const value = currentValueProperty ? currentValueProperty.value : '';
-  const [currentValue, setCurrentValue] = useState(value);
-
-  let newValue = value;
-  if (currentValueProperty && currentState) {
-    newValue = resolveReferences(currentValueProperty.value, currentState, '');
+  let selectOptions = [];
+  try {
+    selectOptions = [
+      ...values.map((value, index) => {
+        return { label: display_values[index], value: value };
+      }),
+    ];
+  } catch (err) {
+    console.log(err);
   }
 
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
+  useEffect(() => {
+    let newValues = [];
+
+    if (_.intersection(values, value)?.length === value?.length) newValues = value;
+
+    setExposedVariable('values', newValues);
+    setSelected(selectOptions.filter((option) => newValues.includes(option.value)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(values)]);
 
   useEffect(() => {
-    setCurrentValue(newValue);
-  }, [newValue]);
+    setExposedVariable('values', value);
+    setSelected(selectOptions.filter((option) => value.includes(option.value)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(value)]);
+
+  useEffect(() => {
+    if (value && !selected) {
+      setSelected(selectOptions.filter((option) => properties.value.includes(option.value)));
+    }
+
+    if (JSON.stringify(exposedVariables.values) === '{}') {
+      setSelected(selectOptions.filter((option) => properties.value.includes(option.value)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onChangeHandler = (items) => {
+    setSelected(items);
+    setExposedVariable(
+      'values',
+      items.map((item) => item.value)
+    ).then(() => fireEvent('onSelect'));
+  };
+
+  registerAction(
+    'selectOption',
+    async function (value) {
+      const newSelected = [
+        ...selected,
+        ...selectOptions.filter(
+          (option) => option.value === value && !selected.map((selectedOption) => selectedOption.value).includes(value)
+        ),
+      ];
+      setSelected(newSelected);
+      setExposedVariable(
+        'values',
+        newSelected.map((item) => item.value)
+      ).then(() => fireEvent('onSelect'));
+    },
+    [selected]
+  );
+  registerAction(
+    'deselectOption',
+    async function (value) {
+      const newSelected = [
+        ...selected.filter(function (item) {
+          return item.value !== value;
+        }),
+      ];
+      setSelected(newSelected);
+      setExposedVariable(
+        'values',
+        newSelected.map((item) => item.value)
+      ).then(() => fireEvent('onSelect'));
+    },
+    [selected]
+  );
+  registerAction('clearSelections', async function () {
+    setSelected([]);
+    setExposedVariable('values', []).then(() => fireEvent('onSelect'));
+  });
 
   return (
-    <div className="multiselect-widget row g-0" style={{ width, height, display:parsedWidgetVisibility ? '' : 'none' }} onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}>
-      <div className="col-auto">
-        <label style={{marginRight: '1rem'}} className="form-label py-1">{label}</label>
+    <div
+      className="multiselect-widget row g-0"
+      data-cy={`draggable-widget-${component.name.toLowerCase()}`}
+      style={{ height, display: visibility ? '' : 'none' }}
+      onFocus={() => {
+        onComponentClick(this, id, component);
+      }}
+    >
+      <div className="col-auto my-auto d-flex align-items-center">
+        <label
+          style={{ marginRight: label ? '1rem' : '', marginBottom: 0 }}
+          className="form-label py-1 text-secondary"
+          data-cy={`multiselect-label-${component.name.toLowerCase()}`}
+        >
+          {label}
+        </label>
       </div>
-      <div className="col px-0">
-        <SelectSearch
-          disabled={parsedDisabledState}
+      <div className="col px-0 h-100" style={{ borderRadius: parseInt(borderRadius) }}>
+        <MultiSelect
+          hasSelectAll={showAllOption ?? false}
           options={selectOptions}
-          value={currentValue}
-          search={true}
-          multiple={true}
-          printOptions="on-focus"
-          onChange={(newValues) => {
-            onComponentOptionChanged(component, 'values', newValues);
-          }}
-          filterOptions={fuzzySearch}
-          placeholder="Select.."
+          value={selected}
+          onChange={onChangeHandler}
+          labelledBy={'Select'}
+          disabled={disabledState}
+          className={`multiselect-box${darkMode ? ' dark' : ''}`}
+          ItemRenderer={ItemRenderer}
         />
       </div>
     </div>

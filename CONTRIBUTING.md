@@ -8,21 +8,21 @@ We love your input! We want to make contributing to this project as easy and tra
 
 ## Setup 
 
-[Mac OS](https://docs.tooljet.io/docs/contributing-guide/setup/Mac%20OS)
+[Mac OS](https://docs.tooljet.io/docs/contributing-guide/setup/macos)
 [Docker](https://docs.tooljet.io/docs/contributing-guide/setup/docker)
 [Ubuntu](https://docs.tooljet.io/docs/contributing-guide/setup/ubuntu)
 
-## We Develop with Github
-We use github to host code, to track issues and feature requests, as well as accept pull requests.
+## We Develop with GitHub
+We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
 
 ## First-time contributors
-We've tagged some issues to make it easy to get started :)
+We've tagged some issues to make it easy to get started :smile:
 [Good first issues](https://github.com/ToolJet/ToolJet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 Looking for ReactJS issues? Check out our [Frontend issues](https://github.com/ToolJet/ToolJet/issues?q=is%3Aissue+is%3Aopen+label%3Afrontend)
 
 Add a comment on the issue and wait for the issue to be assigned before you start working on it. This helps to avoid multiple people working on similar issues.
 
-## We Use [Github Flow](https://guides.github.com/introduction/flow/index.html), So All Code Changes Happen Through Pull Requests
+## We Use [GitHub Flow](https://guides.github.com/introduction/flow/index.html), So All Code Changes Happen Through Pull Requests
 Pull requests are the best way to propose changes to the codebase (we use [Git-Flow](https://nvie.com/posts/a-successful-git-branching-model/)). We actively welcome your pull requests:
 
 1. Fork the repo and create your branch from `develop`. Please create the branch in the format feature/<issue-id>-<issue-name> (eg: feature/176-chart-widget)
@@ -32,11 +32,11 @@ Pull requests are the best way to propose changes to the codebase (we use [Git-F
 5. Make sure your code lints.
 6. Issue that pull request!
 
-## Any contributions you make will be under the Apache-2.0 License
-In short, when you submit code changes, your submissions are understood to be under the same [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0) that covers the project.
+## Any contributions you make will be under the AGPL v3 License
+In short, when you submit code changes, your submissions are understood to be under the same [AGPL v3 License](https://www.gnu.org/licenses/agpl-3.0.en.html) that covers the project.
 
-## Report bugs using Github's [issues](https://github.com/ToolJet/ToolJet/issues)
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](); it's that easy!
+## Report bugs using GitHub's [issues](https://github.com/ToolJet/ToolJet/issues)
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/ToolJet/ToolJet/issues/new/choose). It's that easy!
 
 **Great Bug Reports** tend to have:
 
@@ -49,7 +49,7 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 - Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
 ## License
-By contributing, you agree that your contributions will be licensed under its Apache-2.0 License.
+By contributing, you agree that your contributions will be licensed under its AGPL v3 License.
 
 ## Questions? 
-Contact us on slack [Slack](https://join.slack.com/t/tooljet/shared_invite/zt-r2neyfcw-KD1COL6t2kgVTlTtAV5rtg) or mail us at [hello@tooljet.io](hello@tooljet)
+Contact us on [Slack](https://join.slack.com/t/tooljet/shared_invite/zt-r2neyfcw-KD1COL6t2kgVTlTtAV5rtg) or mail us at [hello@tooljet.io](mailto:hello@tooljet.io).

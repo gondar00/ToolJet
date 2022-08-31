@@ -1,14 +1,22 @@
 import React from 'react';
 import { renderElement } from '../Utils';
-import { Color } from '../Elements/Color';
 import { CodeHinter } from '../../CodeBuilder/CodeHinter';
+import Accordion from '@/_ui/Accordion';
+import { resolveReferences } from '@/_helpers/utils';
 
 class Chart extends React.Component {
   constructor(props) {
     super(props);
 
     const {
-      dataQueries, component, paramUpdated, componentMeta, eventUpdated, eventOptionUpdated, components, currentState
+      dataQueries,
+      component,
+      paramUpdated,
+      componentMeta,
+      eventUpdated,
+      eventOptionUpdated,
+      components,
+      currentState,
     } = props;
 
     this.state = {
@@ -19,7 +27,7 @@ class Chart extends React.Component {
       eventUpdated,
       eventOptionUpdated,
       components,
-      currentState
+      currentState,
     };
   }
 
@@ -32,7 +40,7 @@ class Chart extends React.Component {
       eventUpdated,
       eventOptionUpdated,
       components,
-      currentState
+      currentState,
     } = this.props;
 
     this.setState({
@@ -43,50 +51,177 @@ class Chart extends React.Component {
       eventUpdated,
       eventOptionUpdated,
       components,
-      currentState
+      currentState,
     });
   }
 
   render() {
-    const {
-      dataQueries,
-      component,
-      paramUpdated,
-      componentMeta,
-      eventUpdated,
-      eventOptionUpdated,
-      components,
-      currentState
-    } = this.state;
+    const { dataQueries, component, paramUpdated, componentMeta, components, currentState } = this.state;
 
     const data = this.state.component.component.definition.properties.data;
 
-    return (
-      <div className="properties-container p-2">
-        {renderElement(component, componentMeta, paramUpdated, dataQueries, 'title', 'properties', currentState, components)}
-        {renderElement(component, componentMeta, paramUpdated, dataQueries, 'type', 'properties', currentState, components)}
+    const jsonDescription = this.state.component.component.definition.properties.jsonDescription;
 
-        <div className="field mb-3 chart-data-input">
-          <label className="form-label">Chart data</label>
-          <CodeHinter
-              currentState={this.props.currentState}
-              initialValue={data.value}
-              theme={this.props.darkMode ? 'monokai' : 'duotone-light'}
-              mode= "javascript"
-              lineNumbers={false}
-              className="chart-input pr-2"
-              onChange={(value) => this.props.paramUpdated({ name: 'data' }, 'value', value, 'properties')}
-            />
-        </div>
-        {Object.keys(componentMeta.styles).map((style) => renderElement(component, componentMeta, paramUpdated, dataQueries, style, 'styles', currentState, components))}
-
-        {renderElement(component, componentMeta, paramUpdated, dataQueries, 'loadingState', 'properties', currentState)}
-
-        {renderElement(component, componentMeta, paramUpdated, dataQueries, 'markerColor', 'properties', currentState)}
-
-        {renderElement(component, componentMeta, paramUpdated, dataQueries, 'showGridLines', 'properties', currentState)}
-      </div>
+    const plotFromJson = resolveReferences(
+      this.state.component.component.definition.properties.plotFromJson?.value,
+      currentState
     );
+
+    const chartType = this.state.component.component.definition.properties.type.value;
+
+    let items = [];
+
+    items.push({
+      title: 'Title',
+      children: renderElement(
+        component,
+        componentMeta,
+        paramUpdated,
+        dataQueries,
+        'title',
+        'properties',
+        currentState,
+        components,
+        this.props.darkMode
+      ),
+    });
+
+    items.push({
+      title: 'Plotly JSON chart schema',
+      children: renderElement(
+        component,
+        componentMeta,
+        paramUpdated,
+        dataQueries,
+        'plotFromJson',
+        'properties',
+        currentState
+      ),
+    });
+
+    if (plotFromJson) {
+      items.push({
+        title: 'Json description',
+        children: (
+          <CodeHinter
+            currentState={this.props.currentState}
+            initialValue={jsonDescription?.value ?? {}}
+            theme={this.props.darkMode ? 'monokai' : 'duotone-light'}
+            mode="javascript"
+            lineNumbers={false}
+            className="chart-input pr-2"
+            onChange={(value) => this.props.paramUpdated({ name: 'jsonDescription' }, 'value', value, 'properties')}
+            componentName={`widget/${this.props.component.component.name}::${chartType}`}
+          />
+        ),
+      });
+    } else {
+      items.push({
+        title: 'Properties',
+        children: renderElement(
+          component,
+          componentMeta,
+          paramUpdated,
+          dataQueries,
+          'type',
+          'properties',
+          currentState,
+          components
+        ),
+      });
+
+      items.push({
+        title: 'Chart data',
+        children: (
+          <CodeHinter
+            currentState={this.props.currentState}
+            initialValue={data.value}
+            theme={this.props.darkMode ? 'monokai' : 'duotone-light'}
+            mode="javascript"
+            lineNumbers={false}
+            className="chart-input pr-2"
+            onChange={(value) => this.props.paramUpdated({ name: 'data' }, 'value', value, 'properties')}
+            componentName={`widget/${this.props.component.component.name}::${chartType}`}
+          />
+        ),
+      });
+    }
+
+    if (chartType !== 'pie') {
+      if (!plotFromJson) {
+        items.push({
+          title: 'Marker color',
+          children: renderElement(
+            component,
+            componentMeta,
+            paramUpdated,
+            dataQueries,
+            'markerColor',
+            'properties',
+            currentState
+          ),
+        });
+      }
+
+      items.push({
+        title: 'Options',
+        children: (
+          <>
+            {renderElement(
+              component,
+              componentMeta,
+              paramUpdated,
+              dataQueries,
+              'loadingState',
+              'properties',
+              currentState
+            )}
+            {renderElement(component, componentMeta, paramUpdated, dataQueries, 'showAxes', 'properties', currentState)}
+            ,
+            {renderElement(
+              component,
+              componentMeta,
+              paramUpdated,
+              dataQueries,
+              'showGridLines',
+              'properties',
+              currentState
+            )}
+          </>
+        ),
+      });
+    }
+
+    items.push({
+      title: 'Layout',
+      isOpen: false,
+      children: (
+        <>
+          {renderElement(
+            component,
+            componentMeta,
+            this.props.layoutPropertyChanged,
+            dataQueries,
+            'showOnDesktop',
+            'others',
+            currentState,
+            components
+          )}
+          {renderElement(
+            component,
+            componentMeta,
+            this.props.layoutPropertyChanged,
+            dataQueries,
+            'showOnMobile',
+            'others',
+            currentState,
+            components
+          )}
+        </>
+      ),
+    });
+
+    return <Accordion items={items} />;
   }
 }
 

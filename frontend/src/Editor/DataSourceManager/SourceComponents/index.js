@@ -1,31 +1,27 @@
-import { Elasticsearch } from './Elasticsearch';
-import { Redis } from './Redis';
-import { Postgresql } from './Postgresql';
-import { Mysql } from './Mysql';
-import { Stripe } from './Stripe';
-import { Firestore } from './Firestore';
-import { Restapi } from './Restapi';
-import { Googlesheets } from './Googlesheets';
-import { Slack } from './Slack';
-import { Mongodb } from './Mongodb';
-import { Dynamodb } from './Dynamodb';
-import { Airtable } from './Airtable';
-import { Graphql } from './Graphql';
-import { Mssql } from './Mssql';
+import React from 'react';
+import DynamicForm from '@/_components/DynamicForm';
+import RunjsSchema from './Runjs.schema.json';
 
-export const SourceComponents = {
-    Elasticsearch,
-    Redis,
-    Postgresql,
-    Mysql,
-    Stripe,
-    Firestore,
-    Restapi,
-    Googlesheets,
-    Slack,
-    Mongodb,
-    Dynamodb,
-    Airtable,
-    Graphql,
-    Mssql
-};
+// eslint-disable-next-line import/no-unresolved
+import { allManifests } from '@tooljet/plugins/client';
+
+export const DataBaseSources = Object.keys(allManifests).reduce((accumulator, currentValue) => {
+  if (allManifests[currentValue].type === 'database') accumulator.push(allManifests[currentValue].source);
+  return accumulator;
+}, []);
+export const ApiSources = Object.keys(allManifests).reduce((accumulator, currentValue) => {
+  if (allManifests[currentValue].type === 'api') accumulator.push(allManifests[currentValue].source);
+  return accumulator;
+}, []);
+export const CloudStorageSources = Object.keys(allManifests).reduce((accumulator, currentValue) => {
+  if (allManifests[currentValue].type === 'cloud-storage') accumulator.push(allManifests[currentValue].source);
+  return accumulator;
+}, []);
+
+export const OtherSources = [RunjsSchema.source];
+export const DataSourceTypes = [...DataBaseSources, ...ApiSources, ...CloudStorageSources, ...OtherSources];
+
+export const SourceComponents = Object.keys(allManifests).reduce((accumulator, currentValue) => {
+  accumulator[currentValue] = (props) => <DynamicForm schema={allManifests[currentValue]} {...props} />;
+  return accumulator;
+}, {});

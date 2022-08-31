@@ -1,75 +1,125 @@
-import React from 'react';
-import Datetime from 'react-datetime';
-import 'react-datetime/css/react-datetime.css';
-import { resolveReferences, resolveWidgetFieldValue, validateWidget } from '@/_helpers/utils';
+import React, { useEffect, useState } from 'react';
+import DatePickerComponent from 'react-datepicker';
+import moment from 'moment';
+import 'react-datepicker/dist/react-datepicker.css';
 
 export const Datepicker = function Datepicker({
-  id,
-  width,
   height,
-  component,
+  properties,
+  styles,
+  exposedVariables,
+  setExposedVariable,
+  validate,
   onComponentClick,
-  currentState,
-  onComponentOptionChanged
+  component,
+  id,
+  darkMode,
+  fireEvent,
 }) {
-  console.log('currentState', currentState);
+  const { enableTime, enableDate, defaultValue, disabledDates } = properties;
+  const format = typeof properties.format === 'string' ? properties.format : '';
+  const { visibility, disabledState, borderRadius } = styles;
 
-  const formatProp = component.definition.properties.format;
-  const enableTimeProp = component.definition.properties.enableTime;
-  const enableDateProp = component.definition.properties.enableDate;
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
+  const [date, setDate] = useState(null);
+  const [excludedDates, setExcludedDates] = useState([]);
 
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
+  const selectedDateFormat = enableTime ? `${format} LT` : format;
 
-  let parsedWidgetVisibility = widgetVisibility;
-  
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
+  const computeDateString = (date) => {
+    if (enableDate) {
+      return moment(date).format(selectedDateFormat);
+    }
 
+    if (!enableDate && enableTime) {
+      return moment(date).format('LT');
+    }
+  };
 
-  const enableTime = resolveReferences(enableTimeProp.value, currentState, false);
+  const onDateChange = (date) => {
+    setDate(date);
+    const dateString = computeDateString(date);
+    setExposedVariable('value', dateString).then(() => {
+      fireEvent('onSelect');
+    });
+  };
 
-  let enableDate = true;
-  if (enableDateProp) {
-    enableDate = resolveReferences(enableDateProp.value, currentState, true);
-  }
-  
-  let dateFormat = formatProp
-  try {
-    dateFormat = resolveReferences(formatProp, currentState);
-  } catch (err) { console.log(err); }
-  
-  function onDateChange(event) {
-    onComponentOptionChanged(component, 'value', event.format(dateFormat.value));
-  }
+  useEffect(() => {
+    const dateMomentInstance = defaultValue && moment(defaultValue, selectedDateFormat);
+    if (dateMomentInstance && dateMomentInstance.isValid()) {
+      setDate(dateMomentInstance.toDate());
+      setExposedVariable('value', defaultValue);
+    } else {
+      setDate(null);
+      setExposedVariable('value', undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
 
-  const value = currentState?.components[component?.name]?.value;
+  useEffect(() => {
+    if (Array.isArray(disabledDates) && disabledDates.length > 0) {
+      const _exluded = [];
+      disabledDates?.map((item) => {
+        if (moment(item, format).isValid()) {
+          _exluded.push(moment(item, format).toDate());
+        }
+      });
+      setExcludedDates(_exluded);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabledDates, format]);
 
-  const validationData = validateWidget({
-    validationObject: component.definition.validation,
-    widgetValue: value,
-    currentState
-  })
-
+  const validationData = validate(exposedVariables.value);
   const { isValid, validationError } = validationData;
 
-  const currentValidState = currentState?.components[component?.name]?.isValid;
+  useEffect(() => {
+    setExposedVariable('isValid', isValid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isValid]);
 
-  if(currentValidState !== isValid) {
-    onComponentOptionChanged(component, 'isValid', isValid);
-  }
+  const CustomInputBox = React.forwardRef((props, ref) => {
+    return (
+      <input
+        readOnly
+        {...props}
+        value={date !== null ? computeDateString(date) : 'select date'}
+        className={`input-field form-control ${!isValid ? 'is-invalid' : ''} validation-without-icon px-2 ${
+          darkMode ? 'bg-dark color-white' : 'bg-light'
+        }`}
+        style={{ height, borderRadius: `${borderRadius}px` }}
+        ref={ref}
+      />
+    );
+  });
 
   return (
-    <div data-disabled={parsedDisabledState}  style={{ width, height, display:parsedWidgetVisibility ? '' : 'none'}} onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}>
-      <Datetime 
-        onChange={onDateChange} 
-        timeFormat={enableTime} 
-        closeOnSelect={true}
-        dateFormat={dateFormat.value} 
+    <div
+      data-disabled={disabledState}
+      className="datepicker-widget"
+      data-cy="dragable-widget-datepicker"
+      style={{
+        height,
+        display: visibility ? '' : 'none',
+        borderRadius: `${borderRadius}px`,
+      }}
+    >
+      <DatePickerComponent
+        selected={date}
+        onChange={(date) => onDateChange(date)}
+        showTimeInput={enableTime ? true : false}
+        showTimeSelectOnly={enableDate ? false : true}
+        onFocus={(event) => {
+          onComponentClick(id, component, event);
+        }}
+        showMonthDropdown
+        showYearDropdown
+        dropdownMode="select"
+        customInput={<CustomInputBox />}
+        excludeDates={excludedDates}
       />
-      <div className={`invalid-feedback ${isValid ? '' : 'd-flex'}`}>{validationError}</div>
+
+      <div data-cy="date-picker-invalid-feedback" className={`invalid-feedback ${isValid ? '' : 'd-flex'}`}>
+        {validationError}
+      </div>
     </div>
   );
 };

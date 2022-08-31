@@ -1,31 +1,21 @@
+import React from 'react';
+import DynamicForm from '@/_components/DynamicForm';
+
+// eslint-disable-next-line import/no-unresolved
+import { allOperations } from '@tooljet/plugins/client';
+
 import { Restapi } from './Restapi';
-import { Mysql } from './Mysql';
-import { Postgresql } from './Postgresql';
+import { Runjs } from './Runjs';
 import { Stripe } from './Stripe';
-import { Firestore } from './Firestore';
-import { Redis } from './Redis';
-import { Googlesheets } from './Googlesheets';
-import { Elasticsearch } from './Elasticsearch';
-import { Slack } from './Slack';
-import { Mongodb } from './Mongodb';
-import { Dynamodb } from './Dynamodb';
-import { Airtable } from './Airtable';
-import { Graphql } from './Graphql';
-import { Mssql } from './Mssql';
+import { Openapi } from './Openapi';
 
 export const allSources = {
+  ...Object.keys(allOperations).reduce((accumulator, currentValue) => {
+    accumulator[currentValue] = (props) => <DynamicForm schema={allOperations[currentValue]} {...props} />;
+    return accumulator;
+  }, {}),
   Restapi,
-  Mysql,
-  Postgresql,
+  Runjs,
   Stripe,
-  Firestore,
-  Redis,
-  Googlesheets,
-  Elasticsearch,
-  Slack,
-  Mongodb,
-  Dynamodb,
-  Airtable,
-  Graphql,
-  Mssql
+  Openapi,
 };

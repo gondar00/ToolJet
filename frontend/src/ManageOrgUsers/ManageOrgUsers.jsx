@@ -1,13 +1,10 @@
 import React from 'react';
 import { authenticationService, organizationService, organizationUserService } from '@/_services';
-import 'react-toastify/dist/ReactToastify.css';
 import { Header } from '@/_components';
-import Skeleton from 'react-loading-skeleton';
-import SelectSearch, { fuzzySearch } from 'react-select-search';
-import { toast } from 'react-toastify';
-import { history } from '@/_helpers';
+import { toast } from 'react-hot-toast';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-
+import ReactTooltip from 'react-tooltip';
+import urlJoin from 'url-join';
 class ManageOrgUsers extends React.Component {
   constructor(props) {
     super(props);
@@ -18,13 +15,49 @@ class ManageOrgUsers extends React.Component {
       showNewUserForm: false,
       creatingUser: false,
       newUser: {},
-      idChangingRole: null,
       archivingUser: null,
+      unarchivingUser: null,
+      fields: {},
+      errors: {},
     };
+
+    this.tableRef = React.createRef(null);
+  }
+
+  validateEmail(email) {
+    const re =
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+  }
+
+  handleValidation() {
+    let fields = this.state.fields;
+    let errors = {};
+    //Name
+    if (!fields['firstName']) {
+      errors['firstName'] = 'This field is required';
+    }
+    if (!fields['lastName']) {
+      errors['lastName'] = 'This field is required';
+    }
+    //Email
+    if (!fields['email']) {
+      errors['email'] = 'This field is required';
+    } else if (!this.validateEmail(fields['email'])) {
+      errors['email'] = 'Email is not valid';
+    }
+
+    this.setState({ errors: errors });
+    return Object.keys(errors).length === 0;
   }
 
   componentDidMount() {
     this.fetchUsers();
+  }
+
+  calculateOffset() {
+    const elementHeight = this.tableRef.current.getBoundingClientRect().top;
+    return window.innerHeight - elementHeight;
   }
 
   fetchUsers = () => {
@@ -40,28 +73,13 @@ class ManageOrgUsers extends React.Component {
     );
   };
 
-  changeNewUserOption = (option, value) => {
+  changeNewUserOption = (name, e) => {
+    let fields = this.state.fields;
+    fields[name] = e.target.value;
+
     this.setState({
-      newUser: {
-        ...this.state.newUser,
-        [option]: value,
-      },
+      fields,
     });
-  };
-
-  changeNewUserRole = (id, role) => {
-    this.setState({ idChangingRole: id });
-
-    organizationUserService
-      .changeRole(id, role)
-      .then(() => {
-        toast.success('User role has been updated', { hideProgressBar: true, position: 'top-center' });
-        this.setState({ idChangingRole: null });
-      })
-      .catch(({ error }) => {
-        toast.error(error, { hideProgressBar: true, position: 'top-center' });
-        this.setState({ idChangingRole: null });
-      });
   };
 
   archiveOrgUser = (id) => {
@@ -70,52 +88,98 @@ class ManageOrgUsers extends React.Component {
     organizationUserService
       .archive(id)
       .then(() => {
-        toast.success('The user has been archived', { hideProgressBar: true, position: 'top-center' });
+        toast.success('The user has been archived', {
+          position: 'top-center',
+        });
         this.setState({ archivingUser: null });
         this.fetchUsers();
       })
       .catch(({ error }) => {
-        toast.error(error, { hideProgressBar: true, position: 'top-center' });
+        toast.error(error, { position: 'top-center' });
         this.setState({ archivingUser: null });
       });
   };
 
-  createUser = () => {
-    this.setState({
-      creatingUser: true,
-    });
-
-    const { firstName, lastName, email, role } = this.state.newUser;
+  unarchiveOrgUser = (id) => {
+    this.setState({ unarchivingUser: id });
 
     organizationUserService
-      .create(firstName, lastName, email, role)
+      .unarchive(id)
       .then(() => {
-        this.setState({ creatingUser: false, showNewUserForm: false, newUser: {} });
-        toast.success('User has been created', { hideProgressBar: true, position: 'top-center' });
+        toast.success('The user has been unarchived', {
+          position: 'top-center',
+        });
+        this.setState({ unarchivingUser: null });
         this.fetchUsers();
       })
       .catch(({ error }) => {
-        toast.error(error, { hideProgressBar: true, position: 'top-center' });
-        this.setState({ creatingUser: false, showNewUserForm: true, newUser: {} });
+        toast.error(error, { position: 'top-center' });
+        this.setState({ unarchivingUser: null });
       });
   };
 
-  logout = () => {
-    authenticationService.logout();
-    history.push('/login');
+  createUser = (event) => {
+    event.preventDefault();
+
+    if (this.handleValidation()) {
+      let fields = {};
+      Object.keys(this.state.fields).map((key) => {
+        fields[key] = '';
+      });
+
+      this.setState({
+        creatingUser: true,
+      });
+
+      organizationUserService
+        .create(
+          this.state.fields.firstName,
+          this.state.fields.lastName,
+          this.state.fields.email,
+          this.state.fields.role
+        )
+        .then(() => {
+          toast.success('User has been created', {
+            position: 'top-center',
+          });
+          this.fetchUsers();
+          this.setState({
+            creatingUser: false,
+            showNewUserForm: false,
+            fields: fields,
+          });
+        })
+        .catch(({ error }) => {
+          toast.error(error, { position: 'top-center' });
+          this.setState({ creatingUser: false });
+        });
+    } else {
+      this.setState({ creatingUser: false, showNewUserForm: true });
+    }
   };
 
-  generateInvitationURL = (user) => window.location.origin + '/invitations/' + user.invitation_token;
+  generateInvitationURL = (user) => {
+    if (user.account_setup_token) {
+      return urlJoin(
+        window.public_config?.TOOLJET_HOST,
+        `/invitations/${user.account_setup_token}/workspaces/${user.invitation_token}?oid=${this.state.currentUser.organization_id}`
+      );
+    }
+    return urlJoin(window.public_config?.TOOLJET_HOST, `/organization-invitations/${user.invitation_token}`);
+  };
 
   invitationLinkCopyHandler = () => {
-    toast.info('Invitation URL copied', { hideProgressBar: true, position: 'bottom-right' });
+    toast.success('Invitation URL copied', {
+      position: 'bottom-right',
+    });
   };
 
   render() {
-    const { isLoading, showNewUserForm, creatingUser, users, newUser, idChangingRole, archivingUser } = this.state;
+    const { isLoading, showNewUserForm, creatingUser, users, archivingUser, unarchivingUser } = this.state;
     return (
       <div className="wrapper org-users-page">
         <Header switchDarkMode={this.props.switchDarkMode} darkMode={this.props.darkMode} />
+        <ReactTooltip type="dark" effect="solid" delayShow={250} />
 
         <div className="page-wrapper">
           <div className="container-xl">
@@ -123,11 +187,17 @@ class ManageOrgUsers extends React.Component {
               <div className="row align-items-center">
                 <div className="col">
                   <div className="page-pretitle"></div>
-                  <h2 className="page-title">Users & Permissions</h2>
+                  <h2 className="page-title" data-cy="users-page-title">
+                    Users & Permissions
+                  </h2>
                 </div>
                 <div className="col-auto ms-auto d-print-none">
                   {!showNewUserForm && (
-                    <div className="btn btn-primary" onClick={() => this.setState({ showNewUserForm: true })}>
+                    <div
+                      className="btn btn-primary"
+                      onClick={() => this.setState({ showNewUserForm: true })}
+                      data-cy="invite-new-user"
+                    >
                       Invite new user
                     </div>
                   )}
@@ -141,10 +211,12 @@ class ManageOrgUsers extends React.Component {
               <div className="container-xl">
                 <div className="card">
                   <div className="card-header">
-                    <h3 className="card-title">Add new user</h3>
+                    <h3 className="card-title" data-cy="add-new-user">
+                      Add new user
+                    </h3>
                   </div>
                   <div className="card-body">
-                    <form>
+                    <form onSubmit={this.createUser} noValidate>
                       <div className="form-group mb-3 ">
                         <div className="row">
                           <div className="col">
@@ -152,66 +224,70 @@ class ManageOrgUsers extends React.Component {
                               type="text"
                               className="form-control"
                               placeholder="Enter First Name"
-                              onChange={(e) => {
-                                this.changeNewUserOption('firstName', e.target.value);
-                              }}
+                              name="firstName"
+                              onChange={this.changeNewUserOption.bind(this, 'firstName')}
+                              value={this.state.fields['firstName']}
+                              data-cy="first-name-input"
                             />
+                            <span className="text-danger" data-cy="first-name-error">
+                              {this.state.errors['firstName']}
+                            </span>
                           </div>
                           <div className="col">
                             <input
                               type="text"
                               className="form-control"
                               placeholder="Enter Last Name"
-                              onChange={(e) => {
-                                this.changeNewUserOption('lastName', e.target.value);
-                              }}
+                              name="lastName"
+                              onChange={this.changeNewUserOption.bind(this, 'lastName')}
+                              value={this.state.fields['lastName']}
+                              data-cy="last-name-input"
                             />
+                            <span className="text-danger" data-cy="last-name-error">
+                              {this.state.errors['lastName']}
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div className="form-group mb-3 ">
-                        <label className="form-label">Email address</label>
+                        <label className="form-label" data-cy="email-label">
+                          Email address
+                        </label>
                         <div>
                           <input
-                            type="email"
+                            type="text"
                             className="form-control"
                             aria-describedby="emailHelp"
                             placeholder="Enter email"
-                            onChange={(e) => {
-                              this.changeNewUserOption('email', e.target.value);
-                            }}
+                            name="email"
+                            onChange={this.changeNewUserOption.bind(this, 'email')}
+                            value={this.state.fields['email']}
+                            data-cy="email-input"
                           />
-                        </div>
-                      </div>
-                      <div className="form-group mb-3 ">
-                        <label className="form-label">Role</label>
-                        <div>
-                          <SelectSearch
-                            options={['Admin', 'Developer', 'Viewer'].map((role) => {
-                              return { name: role, value: role.toLowerCase() };
-                            })}
-                            value={newUser.role}
-                            search={true}
-                            onChange={(value) => {
-                              this.changeNewUserOption('role', value);
-                            }}
-                            filterOptions={fuzzySearch}
-                            placeholder="Select.."
-                          />
+                          <span className="text-danger" data-cy="email-error">
+                            {this.state.errors['email']}
+                          </span>
                         </div>
                       </div>
                       <div className="form-footer">
                         <button
+                          type="button"
                           className="btn btn-light mr-2"
-                          onClick={() => this.setState({ showNewUserForm: false, newUser: {} })}
-                          disabled={creatingUser}
+                          onClick={() =>
+                            this.setState({
+                              showNewUserForm: false,
+                              newUser: {},
+                            })
+                          }
+                          data-cy="cancel-button"
                         >
                           Cancel
                         </button>
                         <button
+                          type="submit"
                           className={`btn mx-2 btn-primary ${creatingUser ? 'btn-loading' : ''}`}
-                          onClick={this.createUser}
                           disabled={creatingUser}
+                          data-cy="create-user-button"
                         >
                           Create User
                         </button>
@@ -225,23 +301,26 @@ class ManageOrgUsers extends React.Component {
             {!showNewUserForm && (
               <div className="container-xl">
                 <div className="card">
-                  <div className="card-table table-responsive table-bordered">
+                  <div
+                    className="card-table fixedHeader table-responsive table-bordered"
+                    ref={this.tableRef}
+                    style={{
+                      maxHeight: this.tableRef.current && this.calculateOffset(),
+                    }}
+                  >
                     <table data-testid="usersTable" className="table table-vcenter" disabled={true}>
                       <thead>
                         <tr>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>
-                            <center>Role</center>
-                          </th>
-                          <th>Status</th>
+                          <th data-cy="name-title">Name</th>
+                          <th data-cy="email-title">Email</th>
+                          <th data-cy="status-title">Status</th>
                           <th className="w-1"></th>
                         </tr>
                       </thead>
                       {isLoading ? (
                         <tbody className="w-100" style={{ minHeight: '300px' }}>
-                          {Array.from(Array(4)).map(() => (
-                            <tr>
+                          {Array.from(Array(4)).map((_item, index) => (
+                            <tr key={index}>
                               <td className="col-2 p-3">
                                 <div className="row">
                                   <div
@@ -271,52 +350,55 @@ class ManageOrgUsers extends React.Component {
                           {users.map((user) => (
                             <tr key={user.id}>
                               <td>
-                                <span className="avatar bg-azure-lt avatar-sm">
+                                <span className="avatar bg-azure-lt avatar-sm" data-cy="user-avatar">
                                   {user.first_name ? user.first_name[0] : ''}
                                   {user.last_name ? user.last_name[0] : ''}
                                 </span>
-                                <span className="mx-3" style={{ display: 'inline-flex', marginBottom: '7px' }}>
+                                <span
+                                  className="mx-3"
+                                  style={{
+                                    display: 'inline-flex',
+                                    marginBottom: '7px',
+                                  }}
+                                  data-cy="user-name"
+                                >
                                   {user.name}
                                 </span>
                               </td>
                               <td className="text-muted">
-                                <a href="#" className="text-reset user-email">
+                                <a className="text-reset user-email" data-cy="user-email">
                                   {user.email}
                                 </a>
                               </td>
-                              <td className="text-muted" style={{ width: '280px' }}>
-                                <center className="mx-5 select-search-role">
-                                  <SelectSearch
-                                    options={['Admin', 'Developer', 'Viewer'].map((role) => {
-                                      return { name: role, value: role.toLowerCase() };
-                                    })}
-                                    value={user.role}
-                                    search={false}
-                                    disabled={idChangingRole === user.id}
-                                    onChange={(value) => {
-                                      this.changeNewUserRole(user.id, value);
-                                    }}
-                                    filterOptions={fuzzySearch}
-                                    placeholder="Select.."
-                                  />
-                                  {idChangingRole === user.id && <small>Updating role...</small>}
-                                </center>
-                              </td>
                               <td className="text-muted">
                                 <span
-                                  className={`badge bg-${user.status === 'invited' ? 'warning' : 'success'} me-1 m-1`}
+                                  className={`badge bg-${
+                                    user.status === 'invited'
+                                      ? 'warning'
+                                      : user.status === 'archived'
+                                      ? 'danger'
+                                      : 'success'
+                                  } me-1 m-1`}
+                                  data-cy="status-badge"
                                 ></span>
-                                <small className="user-status">{user.status}</small>
+                                <small className="user-status" data-cy="user-status">
+                                  {user.status}
+                                </small>
                                 {user.status === 'invited' && 'invitation_token' in user ? (
                                   <CopyToClipboard
                                     text={this.generateInvitationURL(user)}
                                     onCopy={this.invitationLinkCopyHandler}
                                   >
                                     <img
+                                      data-tip="Copy invitation link"
                                       className="svg-icon"
-                                      src="/assets/images/icons/copy.svg"
+                                      src="assets/images/icons/copy.svg"
                                       width="15"
                                       height="15"
+                                      style={{
+                                        cursor: 'pointer',
+                                      }}
+                                      data-cy="copy-invitation-link"
                                     ></img>
                                   </CopyToClipboard>
                                 ) : (
@@ -324,16 +406,22 @@ class ManageOrgUsers extends React.Component {
                                 )}
                               </td>
                               <td>
-                                {archivingUser === null && (
-                                  <a
-                                    onClick={() => {
-                                      this.archiveOrgUser(user.id);
-                                    }}
-                                  >
-                                    Archive
-                                  </a>
-                                )}
-                                {archivingUser === user.id && <small>Archiving user...</small>}
+                                <button
+                                  type="button"
+                                  style={{ minWidth: '100px' }}
+                                  className={`btn btn-sm btn-outline-${
+                                    user.status === 'archived' ? 'success' : 'danger'
+                                  } ${unarchivingUser === user.id || archivingUser === user.id ? 'btn-loading' : ''}`}
+                                  disabled={unarchivingUser === user.id || archivingUser === user.id}
+                                  onClick={() => {
+                                    user.status === 'archived'
+                                      ? this.unarchiveOrgUser(user.id)
+                                      : this.archiveOrgUser(user.id);
+                                  }}
+                                  data-cy="user-state"
+                                >
+                                  {user.status === 'archived' ? 'Unarchive' : 'Archive'}
+                                </button>
                               </td>
                             </tr>
                           ))}

@@ -1,73 +1,60 @@
 import React, { useEffect, useState } from 'react';
-import { resolveReferences, resolveWidgetFieldValue, validateWidget } from '@/_helpers/utils';
-import escapeStringRegexp from 'escape-string-regexp';
 
 export const TextInput = function TextInput({
-  id,
-  width,
   height,
-  component,
-  onComponentClick,
-  currentState,
-  onComponentOptionChanged
+  validate,
+  properties,
+  styles,
+  setExposedVariable,
+  fireEvent,
+  registerAction,
 }) {
-
-  const placeholder = component.definition.properties.placeholder.value;
-  const widgetVisibility = component.definition.styles?.visibility?.value ?? true;
-  const disabledState = component.definition.styles?.disabledState?.value ?? false;
-
-  const parsedDisabledState = typeof disabledState !== 'boolean' ? resolveWidgetFieldValue(disabledState, currentState) : disabledState;
-
-  let parsedWidgetVisibility = widgetVisibility;
-  const value = currentState?.components[component?.name]?.value;
-  const currentValidState = currentState?.components[component?.name]?.isValid;
-  
-  const [text, setText] = useState(value);
-
-  const textProperty = component.definition.properties.value;
-  let newText = value;
-  if (textProperty && currentState) {
-    newText = resolveReferences(textProperty.value, currentState, '');
-  }
+  const [value, setValue] = useState(properties.value);
+  const { isValid, validationError } = validate(value);
 
   useEffect(() => {
-    setText(newText);
-    onComponentOptionChanged(component, 'value', newText);
-  }, [newText]);
+    setExposedVariable('isValid', isValid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isValid]);
+  useEffect(() => {
+    setValue(properties.value);
+    setExposedVariable('value', properties.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties.value]);
 
-  const validationData = validateWidget({
-    validationObject: component.definition.validation,
-    widgetValue: value,
-    currentState
-  })
-
-  const { isValid, validationError } = validationData;
-
-  if(currentValidState !== isValid) {
-    onComponentOptionChanged(component, 'isValid', isValid);
-  }
-
-  try {
-    parsedWidgetVisibility = resolveReferences(parsedWidgetVisibility, currentState, []);
-  } catch (err) { console.log(err); }
+  registerAction('setText', async function (text) {
+    setValue(text);
+    setExposedVariable('value', text).then(fireEvent('onChange'));
+  });
+  registerAction('clear', async function () {
+    setValue('');
+    setExposedVariable('value', '').then(fireEvent('onChange'));
+  });
 
   return (
-    <div>
+    <div className="text-input">
       <input
-        disabled={parsedDisabledState}
-        onClick={event => {event.stopPropagation(); onComponentClick(id, component)}}
+        disabled={styles.disabledState}
+        onKeyUp={(e) => {
+          if (e.key == 'Enter') {
+            setValue(e.target.value);
+            setExposedVariable('value', e.target.value).then(() => {
+              fireEvent('onEnterPressed');
+            });
+          }
+        }}
         onChange={(e) => {
-          setText(e.target.value);
-          onComponentOptionChanged(component, 'value', e.target.value);
+          setValue(e.target.value);
+          setExposedVariable('value', e.target.value);
+          fireEvent('onChange');
         }}
         type="text"
         className={`form-control ${!isValid ? 'is-invalid' : ''} validation-without-icon`}
-        placeholder={placeholder}
-        style={{ width, height, display:parsedWidgetVisibility ? '' : 'none' }}
-        value={text}
+        placeholder={properties.placeholder}
+        style={{ height, display: styles.visibility ? '' : 'none', borderRadius: `${styles.borderRadius}px` }}
+        value={value}
       />
       <div className="invalid-feedback">{validationError}</div>
     </div>
-    
   );
 };

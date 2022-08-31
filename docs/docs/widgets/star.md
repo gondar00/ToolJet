@@ -1,33 +1,87 @@
 ---
-sidebar_position: 17
+id: star
+title: Star rating
 ---
-
 # Star rating
 
-Star rating widet can be used to display as well as input ratings. The widget supports half stars and the number of stars can be set too.
+Star rating widget can be used to display as well as input ratings. The widget supports half stars, and the number of stars can be set too.
 
-<img class="screenshot-full" src="/img/widgets/star/star.png" alt="ToolJet - Star rating Widget" height="220"/>
+<div style={{textAlign: 'center'}}>
 
-### Event: onChange
+![ToolJet - Star rating Widget](/img/widgets/star/star-rating.png)
 
-This event is triggered when an star is clicked.
+</div>
 
-### Property : Number of stars (integer), default: 5
+## Event
 
-This property is used for setting the initial count of stars in the list on intial load.
+### On Change
 
-### Property : Default no of selected stars (integer), default: 5
+This event is triggered when a star is clicked.
 
-This property specifies the default count of stars that are selected on initial load.
+:::info
+Check [Action Reference](/docs/actions/show-alert) docs to get the detailed information about all the **Actions**.
+:::
 
-### Property : Enable half star (bool), default: false
+## Properties
 
-Enabling this property activates a half star selection.
+### Label
 
-### Property : Tooltips (String array), default: {{}}
-This is used for displaying informative tooltips on each star its mapped to index of the star.
+The text to be used as the label for the star rating. This field expects a `String` value.
 
-### Property : Star Color (color hex), default: #ffb400
-This is used for setting the display color of the star.
+### Number of stars
 
+Initial number of stars in the list on initial load. `default: 5`. This field expects an integer value.
 
+### Default no of selected stars
+
+This property specifies the default count of stars that are selected on the initial load. `default: 5` (integer). This field expects an integer value.
+
+### Enable half star
+
+Toggle `on` to allow selection of half stars. `default: false` (bool). Click on `Fx` to programmatically define the value `{{true}}` or `{{false}}`.
+
+### Tooltips
+
+This is used for displaying informative tooltips on each star, and it is mapped to the index of the star. `default: []` (array of strings ). Ex: `{{["bad", "okay", "good", "best"]}}`
+
+### General
+#### Tooltip
+
+A Tooltip is often used to specify extra information about something when the user hovers the 
+mouse pointer over the widget.
+
+Under the <b>General</b> accordion, you can set the value in the string format. 
+Now hovering over the widget will display the string as the tooltip.
+
+<div style={{textAlign: 'center'}}>
+
+![ToolJet - widget- button](/img/tooltip.png)
+
+</div>
+
+## Layout
+
+### Show on desktop
+
+Toggle on or off to display the widget in desktop view. You can programmatically determine the value by clicking on `Fx` to set the value `{{true}}` or `{{false}}`.
+### Show on mobile
+
+Toggle on or off to display the widget in mobile view. You can programmatically determine the value by clicking on `Fx` to set the value `{{true}}` or `{{false}}`.
+
+## Styles
+
+### Star Color
+
+Display color of the star. `default: #ffb400` (color hex). Change color by providing `Hex color code` or choosing one from the picker.
+
+### Label color
+
+Change the color of label in widget by providing `Hex color code` or choosing one from the picker.
+
+### Visibility
+
+Toggle on or off to control the visibility of the widget. You can programmatically change its value by clicking on the `Fx` button next to it. If `{{false}}` the widget will not be visible after the app is deployed. By default, it's set to `{{true}}`.
+
+### Disable
+
+This is `off` by default, toggle `on` the switch to lock the widget and make it non-functional. You can also programmatically set the value by clicking on the `Fx` button next to it. If set to `{{true}}`, the widget will be locked and becomes non-functional. By default, its value is set to `{{false}}`.

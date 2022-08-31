@@ -1,31 +1,52 @@
 ---
-sidebar_position: 10
+id: sharing-and-deploying
+title: Preview and Sharing Apps
 ---
 
-# Sharing and deploying apps
+# Preview and Sharing Apps
 
-Now let's see how we can share the app that we built in the previous steps with other users of your organizations. 
+## Preview
 
-Click on the share button on top right corner of the app builder to add new app users. 
+Clicking on `Preview` will open up the currently opened version of the app in the new tab. This is useful if you want to immediately check the app in production.
 
-<img class="screenshot-full" src="/img/tutorial/sharing/add-app-user.gif" alt="ToolJet - Query result transformations" height="420"/>
+<div style={{textAlign: 'center'}}>
 
-If you want the application to be publicly accessed without authentications, make the application public using the same prompt. 
+![ToolJet - Managing Users and Groups](/img/tutorial/sharing/preview.gif)
 
-:::tip
-Unauthenticated users will not have edit access to the public apps.
-:::
+</div>
 
-<img class="screenshot-full" src="/img/tutorial/sharing/public.gif" alt="ToolJet - Query result transformations" height="420"/>
+## Sharing an app
 
+Once you have released a version of your app, you can share the app with others using a customised url. To share an app:
 
-## Deploying apps
-To deploy your app, click on the `deploy` button at the top-right corner of the app builder, create a new version, save the changes to the version and deploy the version.
+- Click on the **Share** button on the top-right corner
 
-<img class="screenshot-full" src="/img/tutorial/sharing/deploy.gif" alt="ToolJet - Query result transformations" height="420"/>
+<div style={{textAlign: 'center'}}>
 
-## Viewer mode 
+![ToolJet - Managing Users and Groups](/img/tutorial/sharing/share.png)
 
-Click on the launch button to open the app in viewer in a new browser tab. 
+</div>
 
-<img class="screenshot-full" src="/img/tutorial/sharing/launch.gif" alt="ToolJet - Query result transformations" height="420"/>
+- In the dialog box, turn on the toggle switch to `Make the application public` and shareable
+
+<div style={{textAlign: 'center'}}>
+
+![ToolJet - Managing Users and Groups](/img/tutorial/sharing/toggle.png)
+
+</div>
+
+- Create your own `customised URL` for the app and click on `copy` to copy the URL
+
+<div style={{textAlign: 'center'}}>
+
+![ToolJet - Managing Users and Groups](/img/tutorial/sharing/url.png)
+
+</div>
+
+- You can also `Embedd` your application using the embeddable link
+
+<div style={{textAlign: 'center'}}>
+
+![ToolJet - Managing Users and Groups](/img/tutorial/sharing/embedd.png)
+
+</div>

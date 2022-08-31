@@ -6,12 +6,14 @@ services:
     stdin_open: true
     image: tooljet/tooljet-client-ce:latest
     restart: always
+    env_file: .env
     depends_on:
       - server
     volumes:
       - logs:/var/log/openresty/
       - certs:/etc/resty-auto-ssl/
       - fallbackcerts:/etc/fallback-certs
+      # - /replace_path_here/nginx.conf.template:/etc/openresty/nginx.conf.template
     ports:
       - 80:80
       - 443:443

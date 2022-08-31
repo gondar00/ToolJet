@@ -5,9 +5,10 @@ export const userService = {
   getAll,
   createUser,
   deleteUser,
-  setPasswordFromToken,
   updateCurrentUser,
   changePassword,
+  getAvatar,
+  updateAvatar,
 };
 
 function getAll() {
@@ -15,12 +16,30 @@ function getAll() {
   return fetch(`${config.apiUrl}/users`, requestOptions).then(handleResponse);
 }
 
+function getAvatar(id) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${config.apiUrl}/files/${id}`, requestOptions)
+    .then((response) => response.blob())
+    .then((blob) => blob);
+}
+
+function updateAvatar(formData, token) {
+  const requestOptions = {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  };
+  return fetch(`${config.apiUrl}/users/avatar`, requestOptions).then(handleResponse);
+}
+
 function createUser(first_name, last_name, email, role) {
   const body = {
     first_name,
     last_name,
     email,
-    role
+    role,
   };
 
   const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
@@ -32,22 +51,8 @@ function deleteUser(id) {
   return fetch(`${config.apiUrl}/users/${id}`, requestOptions).then(handleResponse);
 }
 
-function setPasswordFromToken({ token, password, organization, newSignup, firstName, lastName }) {
-  const body = {
-    token,
-    password,
-    organization,
-    new_signup: newSignup,
-    first_name: firstName,
-    last_name: lastName
-  };
-
-  const requestOptions = { method: 'POST', headers: authHeader(), body: JSON.stringify(body) };
-  return fetch(`${config.apiUrl}/users/set_password_from_token`, requestOptions).then(handleResponse);
-}
-
-function updateCurrentUser(firstName , lastName) {
-  const body = { firstName, lastName };
+function updateCurrentUser(firstName, lastName) {
+  const body = { first_name: firstName, last_name: lastName };
   const requestOptions = { method: 'PATCH', headers: authHeader(), body: JSON.stringify(body) };
   return fetch(`${config.apiUrl}/users/update`, requestOptions).then(handleResponse);
 }

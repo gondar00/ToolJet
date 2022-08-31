@@ -1,36 +1,40 @@
-import { Body, Controller, Post, Patch, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Patch, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Express } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from 'src/modules/auth/jwt-auth.guard';
 import { PasswordRevalidateGuard } from 'src/modules/auth/password-revalidate.guard';
 import { UsersService } from 'src/services/users.service';
+import { User } from 'src/decorators/user.decorator';
+import { UpdateUserDto } from '@dto/user.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(
-    private usersService: UsersService
-  ) { }
-
-  @Post('set_password_from_token')
-  async create(@Request() req) {
-    const result = await this.usersService.setupAccountFromInvitationToken(req.body);
-    return result;
-  }
+  constructor(private usersService: UsersService) {}
 
   @UseGuards(JwtAuthGuard)
   @Patch('update')
-  async update(@Request() req, @Body() body) {
-    const {firstName, lastName } = body
-    await this.usersService.update(req.user.id, { firstName, lastName });
-    await req.user.reload()
+  async update(@User() user, @Body() updateUserDto: UpdateUserDto) {
+    const { first_name: firstName, last_name: lastName } = updateUserDto;
+    await this.usersService.update(user.id, { firstName, lastName });
+    await user.reload();
     return {
-      first_name: req.user.firstName,
-      last_name: req.user.lastName
+      first_name: user.firstName,
+      last_name: user.lastName,
     };
+  }
+
+  @Post('avatar')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async addAvatar(@User() user, @UploadedFile() file: Express.Multer.File) {
+    return this.usersService.addAvatar(user.id, file.buffer, file.originalname);
   }
 
   @UseGuards(JwtAuthGuard, PasswordRevalidateGuard)
   @Patch('change_password')
-  async changePassword(@Request() req, @Body() body) {
-    const { newPassword } = body
-    return await this.usersService.update(req.user.id, { password: newPassword });
+  async changePassword(@User() user, @Body('newPassword') newPassword) {
+    return await this.usersService.update(user.id, {
+      password: newPassword,
+    });
   }
 }
